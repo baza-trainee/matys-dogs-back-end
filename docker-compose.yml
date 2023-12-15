@@ -1,0 +1,17 @@
+version: '3.8'
+services:
+web:
+  build:
+    context: ./server_DJ/
+  ports:
+    - "8000:8000"
+
+  nginx:
+    build: ./nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx:/etc/nginx/conf.d
+      - ./static:/app/static
+    depends_on:
+      - web
