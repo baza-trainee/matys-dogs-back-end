@@ -1,2 +1,8 @@
 .env
 env/
+db.sqlite3
+migrations/
+static/
+staticfiles/
+*.pyc
+*.log
