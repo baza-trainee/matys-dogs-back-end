@@ -1,17 +1,19 @@
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.hashers import make_password, check_password
+from django.http import HttpResponse
 from django.core.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from . import models
 import json
 import re
+import os
 # Create your views here.
 
 
 def home(request):
-    return Response({'massage': 'the server is running'})
+    return HttpResponse(os.environ.get('DOCUMENTETION'))
 
 
 @csrf_exempt
