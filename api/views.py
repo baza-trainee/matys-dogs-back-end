@@ -5,6 +5,7 @@ from django.http import HttpResponse
 from django.core.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
+from rest_framework import status
 from . import models
 import json
 import re
@@ -36,7 +37,7 @@ def register(request):
         new_user = models.UserModel.objects.create(
             email=data['email'], passwordHash=passwordHash)
         new_user.save()
-        return Response({'massage': 'the user is created', 'email': data['email'], 'password': passwordHash}, status=201)
+        return Response({'massage': 'the user is created', 'email': data['email'], 'password': passwordHash}, status=status.HTTP_201_CREATED)
 
 
 @csrf_exempt
@@ -52,4 +53,4 @@ def login(request):
         # check if the password is correct
         if not check_password(data['password'], user.passwordHash):
             return Response({'error': 'the password is incorrect'}, status=400)
-        return Response({'massage': 'the user is logged in'}, status=200)
+        return Response({'massage': 'the user is logged in'}, status=status.HTTP_200_OK)
