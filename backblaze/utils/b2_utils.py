@@ -4,8 +4,6 @@ import tempfile
 import os
 
 # Initialize B2 API
-
-
 def initialize_b2api():
     info = InMemoryAccountInfo()
     b2_api = B2Api(info)
@@ -14,6 +12,16 @@ def initialize_b2api():
     b2_api.authorize_account(
         "production", application_key_id, application_key)
     return b2_api
+
+
+def documentSimplifyUpd(file_obj):
+    b2_api = initialize_b2api()
+    bucket_name = os.getenv('BUCKET_NAME_DOC')
+    bucket = b2_api.get_bucket_by_name(bucket_name=bucket_name)
+    bucket.upload_bytes(file_obj.read(), file_name=file_obj.name)
+    file_name = file_obj.name
+    return file_name, bucket_name
+
 
 
 def converterToWebP(file_obj):
