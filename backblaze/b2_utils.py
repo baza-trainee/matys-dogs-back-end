@@ -1,5 +1,6 @@
 from b2sdk.v1 import B2Api, InMemoryAccountInfo
 from PIL import Image
+import tempfile
 import os
 
 # Initialize B2 API
@@ -20,8 +21,10 @@ def converterToWebP(file_obj):
     bucket_name = os.getenv('BUCKET_NAME_IMG')
     bucket = b2_api.get_bucket_by_name(bucket_name=bucket_name)
     image = Image.open(file_obj)
-    webp_image_name = file_obj.name.rsplit('.', 1)[0] + ".webp"
-    image.save(webp_image_name, "WEBP")
-    with open(webp_image_name, 'rb') as data: 
-        bucket.upload_bytes(data.read(), file_name=webp_image_name)
+    with tempfile.NamedTemporaryFile(suffix='.webp',delete=True) as temp:
+        image.save(temp, "WEBP")
+    image.save(temp.name, "WEBP")
+    with open(temp.name, 'rb') as data: 
+        bucket.upload_bytes(data.read(), file_name=os.path.basename(temp.name))
+    webp_image_name = os.path.basename(temp.name)
     return webp_image_name, bucket_name
