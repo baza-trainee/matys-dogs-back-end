@@ -1,8 +1,9 @@
 from b2sdk.v1 import B2Api, InMemoryAccountInfo
+from PIL import Image
 import os
 
-
 # Initialize B2 API
+
 
 def initialize_b2api():
     info = InMemoryAccountInfo()
@@ -14,7 +15,13 @@ def initialize_b2api():
     return b2_api
 
 
-# def get_bucket(b2_api):
-#     bucket_name = os.getenv('BUCKET_NAME')
-#     bucket = b2_api.get_bucket_by_name(bucket_name)
-#     return bucket
+def converterToWebP(file_obj):
+    b2_api = initialize_b2api()
+    bucket_name = os.getenv('BUCKET_NAME_IMG')
+    bucket = b2_api.get_bucket_by_name(bucket_name=bucket_name)
+    image = Image.open(file_obj)
+    webp_image_name = file_obj.name.rsplit('.', 1)[0] + ".webp"
+    image.save(webp_image_name, "WEBP")
+    with open(webp_image_name, 'rb') as data: 
+        bucket.upload_bytes(data.read(), file_name=webp_image_name)
+    return webp_image_name, bucket_name
