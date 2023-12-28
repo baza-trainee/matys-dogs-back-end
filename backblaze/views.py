@@ -1,15 +1,18 @@
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
 from backblaze.models import FileModel
 from backblaze.utils.b2_utils import converterToWebP, documentSimplifyUpd
 from backblaze.utils.validation import image_validation, document_validation
 
 
+
 # Create your views here.
 
 
+@permission_classes([IsAuthenticated])
 @csrf_exempt
 @api_view(['POST'])
 def upload_image(request):
@@ -27,7 +30,7 @@ def upload_image(request):
                     'image_url': image_url
                      }, status=status.HTTP_200_OK)
 
-
+@permission_classes([IsAuthenticated])
 @csrf_exempt
 @api_view(['POST'])
 def upload_document(request):

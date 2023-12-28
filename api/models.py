@@ -1,6 +1,9 @@
-from django.db import models
-
 # Create your models here.
-class UserModel(models.Model):
-    email = models.EmailField(unique=True)
-    passwordHash = models.CharField(max_length=100)
+from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
+
+class CustomUser(User):
+    def save(self, *args, **kwargs):
+        if (self.is_superuser or self.is_staff) and CustomUser.objects.filter(is_superuser=True).exists():
+            raise ValidationError("Only one superuser is allowed")
+        super().save(*args, **kwargs)
