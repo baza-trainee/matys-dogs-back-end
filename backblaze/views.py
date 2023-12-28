@@ -12,9 +12,10 @@ from backblaze.utils.validation import image_validation, document_validation
 # Create your views here.
 
 
-@permission_classes([IsAuthenticated])
-@csrf_exempt
+
 @api_view(['POST'])
+@csrf_exempt
+@permission_classes([IsAuthenticated])
 def upload_image(request):
     file_obj = request.FILES['image']
     image_validation(file_obj)
@@ -30,9 +31,9 @@ def upload_image(request):
                     'image_url': image_url
                      }, status=status.HTTP_200_OK)
 
-@permission_classes([IsAuthenticated])
-@csrf_exempt
 @api_view(['POST'])
+@csrf_exempt
+@permission_classes([IsAuthenticated])
 def upload_document(request):
     file_obj = request.FILES['document']
     document_validation(file_obj)
