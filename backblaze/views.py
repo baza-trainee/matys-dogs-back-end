@@ -25,7 +25,7 @@ def upload_image(request):
 
     return Response({'message': 'image uploaded successfully',
                     'image_url': image_url
-                     }, status=status.HTTP_201_CREATED)
+                     }, status=status.HTTP_200_OK)
 
 
 @csrf_exempt
@@ -40,4 +40,4 @@ def upload_document(request):
     file_model = FileModel(
         name=file_name, url=document_url, category='document')
     file_model.save()
-    return Response({'message': 'document uploaded successfully', 'document_url': document_url}, status=status.HTTP_201_CREATED)
+    return Response({'message': 'document uploaded successfully', 'document_url': document_url}, status=status.HTTP_200_OK)

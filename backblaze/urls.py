@@ -1,5 +1,4 @@
-from . import views
-from django.urls import path, include
+from django.urls import path
 from backblaze.views import upload_image, upload_document
 urlpatterns = [
     path('images', upload_image, name='upload_image'),
