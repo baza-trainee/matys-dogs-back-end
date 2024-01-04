@@ -7,7 +7,11 @@ WORKDIR /app
 
 RUN apt-get update
 
+# Install system dependencies, including libcairo2
+RUN apt-get install -y libcairo2
+
 RUN pip install --upgrade pip
+
 # Копирование requirements.txt внутрь контейнера
 COPY requirements.txt /app
 
