@@ -19,5 +19,7 @@ from django.urls import path, include
 urlpatterns = [
     # path('admin/', include('admin.urls)),
     path('', include('api.urls')),
-    path('upload/', include('backblaze.urls')),    
+    path('upload/', include('backblaze.urls')),
+    path('', include('dog_card.urls')),
+    path('', include('main_page.urls'))
 ]
