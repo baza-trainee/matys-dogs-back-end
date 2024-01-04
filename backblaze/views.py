@@ -1,47 +1,57 @@
-from django.views.decorators.csrf import csrf_exempt
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from backblaze.models import FileModel
-from backblaze.utils.b2_utils import converterToWebP, documentSimplifyUpd
+from backblaze.utils.b2_utils import converter_to_webP, document_simplify_upd, delete_file_from_backblaze
 from backblaze.utils.validation import image_validation, document_validation
-
 
 
 # Create your views here.
 
 
-
 @api_view(['POST'])
-@csrf_exempt
 @permission_classes([IsAuthenticated])
 def upload_image(request):
     file_obj = request.FILES['image']
+
     image_validation(file_obj)
 
-    webp_image_name, bucket_name = converterToWebP(file_obj)
+    webp_image_name, webp_image_id, bucket_name = converter_to_webP(file_obj)
 
     image_url = f'https://{bucket_name}.s3.us-east-005.backblazeb2.com/{webp_image_name}'
-    file_model = FileModel(name=webp_image_name,
+    file_model = FileModel(id=webp_image_id, name=webp_image_name,
                            url=image_url, category='image')
     file_model.save()
 
-    return Response({'message': 'image uploaded successfully',
-                    'image_url': image_url
-                     }, status=status.HTTP_200_OK)
+    return Response({
+                    'image_url': image_url, 'image_id': webp_image_id, 'image_name': webp_image_name
+                    }, status=status.HTTP_200_OK)
+
 
 @api_view(['POST'])
-@csrf_exempt
 @permission_classes([IsAuthenticated])
 def upload_document(request):
     file_obj = request.FILES['document']
     document_validation(file_obj)
 
-    file_name, bucket_name = documentSimplifyUpd(file_obj)
+    doc_name, doc_id, bucket_name = document_simplify_upd(file_obj)
 
-    document_url = f'https://{bucket_name}.s3.us-east-005.backblazeb2.com/{file_name}'
-    file_model = FileModel(
-        name=file_name, url=document_url, category='document')
+    document_url = f'https://{bucket_name}.s3.us-east-005.backblazeb2.com/{doc_name}'
+    file_model = FileModel(id=doc_id,
+                           name=doc_name, url=document_url, category='document')
     file_model.save()
-    return Response({'message': 'document uploaded successfully', 'document_url': document_url}, status=status.HTTP_200_OK)
+    return Response({'message': 'document uploaded successfully', 'document_url': document_url, 'document_id': doc_id, 'document_name': doc_name}, status=status.HTTP_200_OK)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_file(request, file_id):
+    try:
+        file_model = FileModel.objects.get(id=file_id)
+        file_model.delete()
+        delete_file_from_backblaze(file_id)
+
+        return Response({'message': 'File deleted successfully'}, status=status.HTTP_200_OK)
+    except FileModel.DoesNotExist:
+        return Response({'error': 'File not found'}, status=status.HTTP_404_NOT_FOUND)

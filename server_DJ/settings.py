@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
+from datetime import timedelta
 import dj_database_url
 import os
 from pathlib import Path
@@ -30,7 +31,6 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'True'
-DEBUG = True
 # ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS').split(' ')
 ALLOWED_HOSTS = ['*']
 # Application definition
@@ -44,8 +44,12 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework_simplejwt',
     'rest_framework',
+
+    'main_page',
+    'dog_card',
     'backblaze',
     'api',
+
 ]
 
 MIDDLEWARE = [
@@ -121,7 +125,6 @@ REST_FRAMEWORK = {
     )
 }
 
-from datetime import timedelta
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(days=30),

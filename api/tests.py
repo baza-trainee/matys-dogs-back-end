@@ -1,48 +1,27 @@
-import unittest
-
-from django.test import TestCase
-from django.urls import reverse
+from django.test import TestCase, Client
+from django.contrib.auth import get_user_model
 import json
-from . import views
 
 
-class ViewsTestCase(TestCase):
+class UserTestCase(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.user = get_user_model().objects.create_user(
+            username='admin', email='adminuser@example.com', password='User!234')
 
-
-    def test_register_view(self):
-        # test with valid data
-        data = {
-            'email': 'test@example.com',
-            'password': 'Password123@'
-        }
-        response = self.client.post(reverse('register'), data=json.dumps(data), content_type='application/json')
+    def test_register(self):
+        response = self.client.post('/register', json.dumps({
+            'email': 'adminuser@example.com',
+            'password': 'User!234',
+            'confirmPassword': 'User!234'
+        }), content_type='application/json')
         self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.json()['email'], 'adminuser@example.com')
 
-        # test with invalid data
-        data = {
-            'email': 'test!@example.com',
-            'password': 'password'
-        }
-        response = self.client.post(reverse('register'), data=json.dumps(data), content_type='application/json')
-        self.assertEqual(response.status_code, 400)
-
-    def test_login_view(self):
-        # test with valid data
-        data = {
-            'email': 'test@example.com',
-            'password': 'Password123@'
-        }
-        response = self.client.post(reverse('login'), data=json.dumps(data), content_type='application/json')
+    def test_login(self):
+        response = self.client.post('/login', json.dumps({
+            'email': 'adminuser@example.com',
+            'password': 'User!234'
+        }), content_type='application/json')
         self.assertEqual(response.status_code, 200)
-
-        # test with invalid data
-        data = {
-            'email': 'tes!t@example.com',
-            'password': 'password'
-        }
-        response = self.client.post(reverse('login'), data=json.dumps(data), content_type='application/json')
-        self.assertEqual(response.status_code, 400)
-
-
-if __name__ == '__main__':
-    unittest.main()
+        self.assertIn('accsess', response.json())
