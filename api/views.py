@@ -1,8 +1,9 @@
-from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.hashers import check_password
 from django.core.exceptions import ValidationError
+from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
+from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 from django.contrib.auth.models import User
 from api.validation import email_validation, password_validation
@@ -13,7 +14,6 @@ import json
 
 
 @api_view(['POST'])
-@csrf_exempt
 def register(request):
     # get the data from the request
     data = json.loads(request.body)
@@ -33,7 +33,6 @@ def register(request):
 
 
 @api_view(['POST'])
-@csrf_exempt
 def login(request):
     # get the data from the request
     data = json.loads(request.body)
@@ -51,3 +50,20 @@ def login(request):
     # create a access token
     accsess = str(refesh.access_token)
     return Response({'message': 'Користувач увійшов в систему', 'accsess': accsess, }, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def reset_password(request):
+    user_token = request.headers.get('Authorization')
+    token_data = user_token.split(' ')[1]
+    try:
+        user_token = Token.objects.get(key=token_data)
+    except not Token:
+        return Response({'error': 'Invalid token'}, status=status.HTTP_404_NOT_FOUND)
+    return Response({'message': 'Password reset'}, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+def forgot_password(request):
+    pass
