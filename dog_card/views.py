@@ -1,6 +1,6 @@
 from rest_framework.decorators import api_view
 from django.views.decorators.csrf import csrf_exempt
-from rest_framework import status
+from rest_framework import status   
 from dog_card.models import DogCardModel
 from rest_framework.response import Response
 from dog_card.serializer import DogCardSerializer
