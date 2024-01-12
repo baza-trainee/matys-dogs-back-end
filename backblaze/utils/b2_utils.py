@@ -1,14 +1,12 @@
 from b2sdk.v1 import B2Api, InMemoryAccountInfo
 from PIL import Image
 import os
-import tempfile
 from cairosvg import svg2png
 from io import BytesIO
-import shutil
+from rest_framework.exceptions import ValidationError
+
 
 # Initialize B2 API
-
-
 def initialize_b2api():
     info = InMemoryAccountInfo()
     b2_api = B2Api(info)
@@ -16,56 +14,60 @@ def initialize_b2api():
     application_key = os.getenv('APPLICATION_KEY')
     b2_api.authorize_account(
         "production", application_key_id, application_key)
-    return b2_api
+    bucket_name = os.getenv('BUCKET_NAME_IMG')
+    bucket = b2_api.get_bucket_by_name(bucket_name=bucket_name)
+    return bucket, bucket_name
+
+# Document simplify and upload
 
 
 def document_simplify_upd(file_obj):
-    b2_api = initialize_b2api()
-    bucket_name = os.getenv('BUCKET_NAME_IMG')
-    bucket = b2_api.get_bucket_by_name(bucket_name=bucket_name)
+    bucket, bucket_name = initialize_b2api()
     file_info = bucket.upload_bytes(file_obj.read(), file_name=file_obj.name)
     doc_name = file_obj.name
     doc_id = file_info.id_
     return doc_name, doc_id, bucket_name
 
 
-# def convert_svg_to_png(svg_file):
-#     with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as temp_png:
-#         png_image = svg2png(bytestring=svg_file.read())
-#         image = Image.open(BytesIO(png_image))
-#         image.save(temp_png.name, 'PNG')
-#         return temp_png.name
-
-
+# Convert to webp
 def converter_to_webP(file_obj):
-    b2_api = initialize_b2api()
-    bucket_name = os.getenv('BUCKET_NAME_IMG')
-    bucket = b2_api.get_bucket_by_name(bucket_name=bucket_name)
+    # Initialize B2 API
+    bucket, bucket_name = initialize_b2api()
+
     if file_obj.name.endswith('.svg'):
         # conver to png
         png_data = svg2png(bytestring=file_obj.read())
         # convert to webp
-        png_image = Image.open(BytesIO(png_data)).convert('RGB')
-        byte_arr = BytesIO()
-        png_image.save(byte_arr, format='webp')
-        byte_arr.seek(0)
+        image = Image.open(BytesIO(png_data)).convert('RGB')
     else:
         image = Image.open(BytesIO(file_obj.read())).convert('RGB')
-        byte_arr = BytesIO()
-        image.save(byte_arr, format='webp')
-        byte_arr.seek(0)
+
+    # compress image
+    byte_arr = BytesIO()
+    byte_arr.seek(0)
+    byte_arr.truncate(0)
+    image.save(byte_arr, format='webp', optimize=True, quality=10)
+    # check size
+    size_kb = byte_arr.tell() / 1024
+    if size_kb > 2097152:
+        raise ValidationError(
+            detail={'error': 'Розмір зображення не повинен перевищувати 2MB'})
 
     webp_file_name = os.path.splitext(file_obj.name)[0] + '.webp'
     file_info = bucket.upload_bytes(
-        byte_arr.read(), file_name=webp_file_name)
+        byte_arr.getvalue(), file_name=webp_file_name)
 
     webp_image_name = file_info.file_name
     webp_image_id = file_info.id_
-    return webp_image_name, webp_image_id, bucket_name
+    size = file_info.size
+
+    return webp_image_name, webp_image_id, bucket_name, size
+
+
+# Delete file from backblaze
 
 
 def delete_file_from_backblaze(id):
-    b2_api = initialize_b2api()
-    bucket_name = os.getenv('BUCKET_NAME_IMG')
-    bucket = b2_api.get_bucket_by_name(bucket_name=bucket_name)
-    bucket.delete_file_version(file_name='', file_id=id)
+    bucket = initialize_b2api()
+    file_info = bucket.get_file_info_by_id(file_id=id)
+    return bucket.delete_file_version(file_info.id_, file_info.file_name)
