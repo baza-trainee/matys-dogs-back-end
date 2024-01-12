@@ -31,7 +31,9 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'True'
+DEBUG = True
 
+# EMAIL
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_USE_TLS = True
 EMAIL_HOST = os.environ.get('EMAIL_HOST')
@@ -59,6 +61,7 @@ INSTALLED_APPS = [
     'dog_card',
     'backblaze',
     'api',
+    'about'
 
 ]
 

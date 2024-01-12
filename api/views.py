@@ -1,5 +1,5 @@
 from django.contrib.auth.hashers import check_password
-from django.core.exceptions import ValidationError
+from rest_framework.validators import ValidationError
 from rest_framework.authtoken.models import Token
 from django.core.mail import send_mail
 from rest_framework.response import Response
@@ -24,7 +24,8 @@ def register(request):
     # check if the user is already exist
     user = User.objects.filter(email=data['email']).first()
     if user:
-        return Response({'error': 'Помилка регистрації.'}, status=status.HTTP_400_BAD_REQUEST)
+        raise ValidationError(
+            {'error': 'Помилка регистрації.'}, status=status.HTTP_400_BAD_REQUEST)
     # create a new user
     new_user = User.objects.create_user(
         username='admin',

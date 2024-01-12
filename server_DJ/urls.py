@@ -21,5 +21,6 @@ urlpatterns = [
     path('', include('api.urls')),
     path('upload/', include('backblaze.urls')),
     path('', include('dog_card.urls')),
-    path('', include('main_page.urls'))
+    path('', include('main_page.urls')),
+    path('', include('about.urls'))
 ]
