@@ -3,5 +3,5 @@ from backblaze.views import upload_image, upload_document, delete_file
 urlpatterns = [
     path('images', upload_image, name='upload_image'),
     path('documents', upload_document, name='upload_document'),
-    path('delete/<str:id>', delete_file, name='delete_file')
+    path('<str:file_id>', delete_file, name='delete_file'),
 ]
