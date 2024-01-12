@@ -19,7 +19,7 @@ def get_dogs_cards(request):
 
 @api_view(['GET'])
 @csrf_exempt
-def search_dogs_cards(request, params):
+def search_dogs_cards(request):
     search_name = request.GET.get('name', '')
     search_size = request.GET.get('size', '')
     serch_gender = request.GET.get('gender', '')

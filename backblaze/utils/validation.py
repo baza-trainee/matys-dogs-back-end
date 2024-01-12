@@ -9,9 +9,6 @@ def image_validation(image_obj):
     if not image_obj.name.endswith(valid_extensions):
         raise ValidationError(detail={'error': 'Недійсний формат'})
 
-    if image_obj.size > 2097152:  # 2MB
-        raise ValidationError(
-            detail={'error': 'Розмір зображення не повинен перевищувати 2MB'})
 
 
 def document_validation(document_obj):

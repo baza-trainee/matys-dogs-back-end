@@ -7,7 +7,7 @@ def email_validation(email):
     if email is None:
         raise ValidationError({'error': 'потрібна електронна пошта'})
 
-    if email is '':
+    if email == '':
         raise ValidationError(
             {'error': 'Будь ласка, заповніть всі обов\'язкові поля'})
 

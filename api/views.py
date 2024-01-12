@@ -1,6 +1,7 @@
 from django.contrib.auth.hashers import check_password
 from django.core.exceptions import ValidationError
 from rest_framework.authtoken.models import Token
+from django.core.mail import send_mail
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import IsAuthenticated
@@ -49,7 +50,7 @@ def login(request):
     refesh = RefreshToken.for_user(user)
     # create a access token
     accsess = str(refesh.access_token)
-    return Response({'message': 'Користувач увійшов в систему', 'accsess': accsess, }, status=status.HTTP_200_OK)
+    return Response({'message': 'Користувач увійшов в систему', 'token_accsess': accsess, }, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])
@@ -66,4 +67,13 @@ def reset_password(request):
 
 @api_view(['POST'])
 def forgot_password(request):
-    pass
+    email = 'jabsoluty@gmail.com'
+
+    send_mail(
+        'Reset passowrd',
+        f'Click to link to reset password',
+        'matys1dogshelper.gmail.com',
+        [email],
+        fail_silently=False,
+    )
+    return Response({"massage": "email was sened succesuly"})

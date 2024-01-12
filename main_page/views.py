@@ -6,15 +6,19 @@ from backblaze.utils.b2_utils import converter_to_webP
 from backblaze.utils.validation import image_validation
 from rest_framework.permissions import IsAuthenticated
 from backblaze.models import FileModel
+from dog_card.models import DogCardModel
 from main_page.serializer import NewsSerializer
+from dog_card.serializer import DogCardSerializer
 # Create your views here.
 
 
 @api_view(['GET'])
-def get_news(request):
-    getAllNews = News.objects.all()
-    serializer = NewsSerializer(getAllNews, many=True)
-    return Response({'news': serializer.data}, status=status.HTTP_200_OK)
+def main_page_view(request):
+    news = News.objects.order_by('-post_at')[:4]
+    dog_cards = DogCardModel.objects.all()
+    news_serializer = NewsSerializer(news, many=True)
+    dog_card_serializer = DogCardSerializer(dog_cards, many=True)
+    return Response({'news': news_serializer.data, 'dog_card': dog_card_serializer.data}, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])
