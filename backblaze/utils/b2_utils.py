@@ -68,6 +68,11 @@ def converter_to_webP(file_obj):
 
 
 def delete_file_from_backblaze(id):
-    bucket = initialize_b2api()
+    bucket, _ = initialize_b2api()
+    # Get file info by id
     file_info = bucket.get_file_info_by_id(file_id=id)
-    return bucket.delete_file_version(file_info.id_, file_info.file_name)
+    # Delete file
+    delted_file = bucket.delete_file_version(
+        file_id=file_info.id_, file_name=file_info.file_name)
+    # Return deleted file info
+    return delted_file
