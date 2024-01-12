@@ -4,7 +4,7 @@ from django.views.decorators.csrf import csrf_exempt
 # Create your views here.
 
 
-@api_view['GET']
+@api_view(['GET'])
 @csrf_exempt
 def about():
     return Response({'message': 'Hello, world!'})
