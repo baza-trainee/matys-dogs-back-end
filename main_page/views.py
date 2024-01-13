@@ -21,7 +21,7 @@ def main_page_view(request):
     # Serialize news and dog cards
     news_serializer = NewsSerializer(news, many=True)
     dog_card_serializer = DogCardSerializer(dog_cards, many=True)
-    return Response({'news': news_serializer.data, 'dog_card': dog_card_serializer.data}, status=status.HTTP_200_OK)
+    return Response({'news_data': news_serializer.data, 'dog_cards': dog_card_serializer.data}, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])
@@ -29,7 +29,7 @@ def main_page_view(request):
 def create_news(request):
     title = request.data['title']
     sub_text = request.data['sub_text']
-    Text = request.data['Text']
+    url = request.data['url']
     photo = request.FILES['photo']
 
     image_validation(photo)
@@ -41,14 +41,14 @@ def create_news(request):
     new_file.save()
 
     new_news = News.objects.create(
-        title=title, sub_text=sub_text, Text=Text, photo=new_file)
+        title=title, sub_text=sub_text, url=url, photo=new_file)
     new_news.save()
     return Response({'massage': 'news was created',
                      'news': {
                          'id': new_news.id,
                          'title': new_news.title,
                          'sub_text': new_news.sub_text,
-                         'Text': new_news.Text,
+                         'url': new_news.url,
                          'photo': {
                              'id': new_news.photo.id,
                              'name': new_news.photo.name,
