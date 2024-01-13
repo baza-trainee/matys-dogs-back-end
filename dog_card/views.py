@@ -9,9 +9,6 @@ from django.db.models import Q
 # Create your views here.
 
 
-
-
-
 @api_view(['GET'])
 @csrf_exempt
 def search_dogs_cards(request):
@@ -35,4 +32,4 @@ def search_dogs_cards(request):
         serializers = DogCardSerializer(searched_cards, many=True)
         return Response({'message': serializers.data})
     else:
-        return Response({'message': 'No cards found'}, status=status.HTTP_200_OK)
+        return Response({'message': 'Карт не знайдено'}, status=status.HTTP_200_OK)

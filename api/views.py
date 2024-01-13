@@ -51,7 +51,7 @@ def login(request):
     refesh = RefreshToken.for_user(user)
     # create a access token
     accsess = str(refesh.access_token)
-    return Response({'message': 'Користувач увійшов в систему', 'token_accsess': accsess, }, status=status.HTTP_200_OK)
+    return Response({'message': 'Користувач увійшов в систему', 'access_token': accsess, }, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])
