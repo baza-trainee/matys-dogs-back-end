@@ -7,6 +7,8 @@ from rest_framework.exceptions import ValidationError
 
 
 # Initialize B2 API
+
+
 def initialize_b2api():
     info = InMemoryAccountInfo()
     b2_api = B2Api(info)
@@ -18,20 +20,11 @@ def initialize_b2api():
     bucket = b2_api.get_bucket_by_name(bucket_name=bucket_name)
     return bucket, bucket_name
 
-# Document simplify and upload
-
-
-def document_simplify_upd(file_obj):
-    bucket, bucket_name = initialize_b2api()
-    file_info = bucket.upload_bytes(file_obj.read(), file_name=file_obj.name)
-    doc_name = file_obj.name
-    doc_id = file_info.id_
-    return doc_name, doc_id, bucket_name
-
 
 # Convert to webp
+
+
 def converter_to_webP(file_obj):
-    # Initialize B2 API
     bucket, bucket_name = initialize_b2api()
 
     if file_obj.name.endswith('.svg'):
@@ -43,16 +36,12 @@ def converter_to_webP(file_obj):
         image = Image.open(BytesIO(file_obj.read())).convert('RGB')
 
     # compress image
-    byte_arr = BytesIO()
-    byte_arr.seek(0)
-    byte_arr.truncate(0)
-    image.save(byte_arr, format='webp', optimize=True, quality=10)
+    byte_arr = compress_image(image)
     # check size
-    size_kb = byte_arr.tell() / 1024
-    if size_kb > 2097152:
+    if byte_arr.tell() > 2097152:
         raise ValidationError(
             detail={'error': 'Розмір зображення не повинен перевищувати 2MB'})
-
+    # upload image to backblaze
     webp_file_name = os.path.splitext(file_obj.name)[0] + '.webp'
     file_info = bucket.upload_bytes(
         byte_arr.getvalue(), file_name=webp_file_name)
@@ -62,6 +51,40 @@ def converter_to_webP(file_obj):
     size = file_info.size
 
     return webp_image_name, webp_image_id, bucket_name, size
+
+
+# Compress image
+def compress_image(image, quality=80, lossy_quality=50, step_quality=4, step_lossy_quality=5, refactor_size=0.5, target_size=250000, min_dimension=100):
+    byte_arr = BytesIO()
+    current_image = image
+    while quality >= 10 and (current_image.width > min_dimension or current_image.height > min_dimension):
+        byte_arr.seek(0)
+        byte_arr.truncate(0)
+        current_image.save(byte_arr, format='webp', optimize=True,
+                           quality=quality, progressive=True, lossy=True, lossy_quality=lossy_quality)
+
+        if byte_arr.tell() <= target_size:
+            break
+        print(f'current size: {byte_arr.tell()}')
+        if byte_arr.tell() > target_size and (current_image.width > min_dimension or current_image.height > min_dimension):
+            new_width = int(image.width * refactor_size)
+            new_height = int(image.height * refactor_size)
+            current_image = current_image.resize((new_width, new_height))
+        quality -= step_quality
+        lossy_quality -= step_lossy_quality
+        refactor_size *= 0.85
+    return byte_arr
+
+
+# Document simplify and upload
+
+
+def document_simplify_upd(file_obj):
+    bucket, bucket_name = initialize_b2api()
+    file_info = bucket.upload_bytes(file_obj.read(), file_name=file_obj.name)
+    doc_name = file_obj.name
+    doc_id = file_info.id_
+    return doc_name, doc_id, bucket_name
 
 
 # Delete file from backblaze

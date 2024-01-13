@@ -25,9 +25,8 @@ def upload_image(request):
                            url=image_url, category='image')
     file_model.save()
 
-    return Response({
-                    'image_url': image_url, 'image_id': webp_image_id, 'image_name': webp_image_name, 'size': size
-                    }, status=status.HTTP_200_OK)
+    return Response({'massage': 'Зображення успішно завантажено ',                    'image_url': image_url, 'image_id': webp_image_id, 'image_name': webp_image_name, 'size': size
+                     }, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])
@@ -43,7 +42,7 @@ def upload_document(request):
     file_model = FileModel(id=doc_id,
                            name=doc_name, url=document_url, category='document')
     file_model.save()
-    return Response({'message': 'document uploaded successfully', 'document_url': document_url, 'document_id': doc_id, 'document_name': doc_name}, status=status.HTTP_200_OK)
+    return Response({'message': 'Документ успішно завантажений', 'document_url': document_url, 'document_id': doc_id, 'document_name': doc_name}, status=status.HTTP_200_OK)
 
 
 @api_view(['DELETE'])
@@ -52,13 +51,21 @@ def delete_file(request, file_id):
     try:
         # Get file from database
         file_model = FileModel.objects.get(id=file_id)
+        if not file_model:
+            delete_file_from_backblaze(file_id)
+            return Response({'message': 'Файл успішно видалено'}, status=status.HTTP_200_OK)
+
         # Delete file from Backblaze
         delted_file = delete_file_from_backblaze(file_id)
+        if not delete_file:
+            file_model.delete()
+            return Response({'message': 'Файл успішно видалено'}, status=status.HTTP_200_OK)
+
         # Delete file from database
         if delted_file:
             file_model.delete()
-            return Response({'message': 'File deleted successfully', 'file_name': delted_file.file_name, 'file_id': delted_file.file_id}, status=status.HTTP_200_OK)
+            return Response({'message': 'Файл успішно видалено', 'file_name': delted_file.file_name, 'file_id': delted_file.file_id}, status=status.HTTP_200_OK)
         else:
-            return Response({'error': 'Failed to delete file from Backblaze'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({'error': 'Не вдалося видалити файл'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     except FileModel.DoesNotExist:
-        return Response({'error': 'File not found'}, status=status.HTTP_404_NOT_FOUND)
+        return Response({'error': 'Файл не знайдено'}, status=status.HTTP_404_NOT_FOUND)
