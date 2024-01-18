@@ -1,16 +1,18 @@
 from django.contrib.auth.hashers import check_password
 from rest_framework.validators import ValidationError
-from rest_framework.authtoken.models import Token
 from django.core.mail import send_mail
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
 from rest_framework.response import Response
-from rest_framework.decorators import api_view, permission_classes, authentication_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import api_view
 from rest_framework import status
 from django.contrib.auth.models import User
 from api.validation import email_validation, password_validation
 from rest_framework_simplejwt.tokens import RefreshToken
+from django.conf import settings
 import json
-
+import os
 # Create your views here.
 
 
@@ -31,7 +33,7 @@ def register(request):
         username='admin',
         email=data['email'], password=data['password'])
     new_user.save()
-    return Response({'massage': 'Користувач зареєстрований', 'email': data['email']}, status=status.HTTP_201_CREATED)
+    return Response({'message': 'Користувач зареєстрований', 'email': data['email']}, status=status.HTTP_201_CREATED)
 
 
 @api_view(['POST'])
@@ -55,26 +57,41 @@ def login(request):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def reset_password(request):
-    user_token = request.headers.get('Authorization')
-    token_data = user_token.split(' ')[1]
+def reset_password(request, uidb64, token):
     try:
-        user_token = Token.objects.get(key=token_data)
-    except not Token:
-        return Response({'error': 'Invalid token'}, status=status.HTTP_404_NOT_FOUND)
-    return Response({'message': 'Password reset'}, status=status.HTTP_200_OK)
+        new_password_data = json.loads(request.body)
+        password_validation(
+            new_password_data['password'], new_password_data['confirmPassword'])
+
+        uid = force_str(urlsafe_base64_decode(uidb64))
+        user = User.objects.get(pk=uid)
+
+        if default_token_generator.check_token(user, token):
+            user.set_password(new_password_data['password'])
+            user.save()
+            return Response({'message': 'Скидання пароля Успішні'}, status=status.HTTP_200_OK)
+        else:
+            return Response({'error': 'Неприпустимий токен'}, status=status.HTTP_400_BAD_REQUEST)
+    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+        return Response({'error': 'Невірний запит'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['POST'])
 def forgot_password(request):
-    email = 'jabsoluty@gmail.com'
-
-    send_mail(
-        'Reset passowrd',
-        f'Click to link to reset password',
-        'matys1dogshelper.gmail.com',
-        [email],
-        fail_silently=False,
-    )
-    return Response({"massage": "email was sened succesuly"})
+    data = json.loads(request.body)
+    try:
+        domain = os.environ.get('DOMAIN')
+        user = User.objects.get(email=data['email'])
+        token = default_token_generator.make_token(user)
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        password_reset_link = f'{domain}/reset-passoword/{uid}/{token}'
+        send_mail(
+            'Скинути пароль',
+            f'Клацніть, щоб посилання на скидання пароля : {password_reset_link}',
+            settings.EMAIL_HOST_USER,
+            [data['email']],
+            fail_silently=False,
+        )
+        return Response({"message": "Електронна пошта була успішно надіслана"})
+    except User.DoesNotExist:
+        return Response({"error": "Електронна пошта не існує"}, status=status.HTTP_400_BAD_REQUEST)

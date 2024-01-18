@@ -10,51 +10,64 @@ from rest_framework.exceptions import ValidationError
 
 
 def initialize_b2api():
-    info = InMemoryAccountInfo()
-    b2_api = B2Api(info)
-    application_key_id = os.getenv('APPLICATION_KEY_ID')
-    application_key = os.getenv('APPLICATION_KEY')
-    b2_api.authorize_account(
-        "production", application_key_id, application_key)
-    bucket_name = os.getenv('BUCKET_NAME_IMG')
-    bucket = b2_api.get_bucket_by_name(bucket_name=bucket_name)
-    return bucket, bucket_name
+    required_env_varibles = ['APPLICATION_KEY_ID', 'APPLICATION_KEY',
+                             'BUCKET_NAME_IMG']
+    for var in required_env_varibles:
+        if not os.environ.get(var):
+            raise ValueError(f'{var} is not set')
+    try:
+        info = InMemoryAccountInfo()
+        b2_api = B2Api(info)
+        application_key_id = os.environ.get('APPLICATION_KEY_ID')
+        application_key = os.environ.get('APPLICATION_KEY')
+        b2_api.authorize_account(
+            "production", application_key_id, application_key)
+        bucket_name = os.environ.get('BUCKET_NAME_IMG')
+        bucket = b2_api.get_bucket_by_name(bucket_name=bucket_name)
+        return bucket, bucket_name
+    except Exception as e:
+        raise ValidationError(f"Error initializing B2 API: {e}")
 
 
 # Convert to webp
 
 
 def converter_to_webP(file_obj):
-    bucket, bucket_name = initialize_b2api()
+    try:
+        bucket, bucket_name = initialize_b2api()
 
-    if file_obj.name.endswith('.svg'):
-        # conver to png
-        png_data = svg2png(bytestring=file_obj.read())
-        # convert to webp
-        image = Image.open(BytesIO(png_data)).convert('RGB')
-    else:
-        image = Image.open(BytesIO(file_obj.read())).convert('RGB')
+        if file_obj.name.endswith('.svg'):
+            # conver to png
+            png_data = svg2png(bytestring=file_obj.read())
+            # convert to webp
+            image = Image.open(BytesIO(png_data)).convert('RGB')
+        else:
+            image = Image.open(BytesIO(file_obj.read())).convert('RGB')
 
-    # compress image
-    byte_arr = compress_image(image)
-    # check size
-    if byte_arr.tell() > 2097152:
-        raise ValidationError(
-            detail={'error': 'Розмір зображення не повинен перевищувати 2MB'})
-    # upload image to backblaze
-    webp_file_name = os.path.splitext(file_obj.name)[0] + '.webp'
-    file_info = bucket.upload_bytes(
-        byte_arr.getvalue(), file_name=webp_file_name)
+        # compress image
+        byte_arr = compress_image(image)
+        # check size
+        if byte_arr.tell() > 2097152:
+            raise ValidationError(
+                detail={'error': 'Розмір зображення не повинен перевищувати 2MB'})
+        # upload image to backblaze
+        webp_file_name = os.path.splitext(file_obj.name)[0] + '.webp'
+        file_info = bucket.upload_bytes(
+            byte_arr.getvalue(), file_name=webp_file_name)
 
-    webp_image_name = file_info.file_name
-    webp_image_id = file_info.id_
-    size = file_info.size
+        webp_image_name = file_info.file_name
+        webp_image_id = file_info.id_
+        size = file_info.size
 
-    return webp_image_name, webp_image_id, bucket_name, size
+        return webp_image_name, webp_image_id, bucket_name, size
+    except Exception as e:
+        raise ValidationError(detail={f"Error converting to webp: {e}"})
 
 
 # Compress image
 def compress_image(image, quality=80, lossy_quality=50, step_quality=4, step_lossy_quality=5, refactor_size=0.5, target_size=250000, min_dimension=100):
+    if not isinstance(image, Image.Image):
+        raise ValidationError(detail={'error': 'Invalid image object'})
     byte_arr = BytesIO()
     current_image = image
     while quality >= 10 and (current_image.width > min_dimension or current_image.height > min_dimension):
@@ -80,22 +93,31 @@ def compress_image(image, quality=80, lossy_quality=50, step_quality=4, step_los
 
 
 def document_simplify_upd(file_obj):
-    bucket, bucket_name = initialize_b2api()
-    file_info = bucket.upload_bytes(file_obj.read(), file_name=file_obj.name)
-    doc_name = file_obj.name
-    doc_id = file_info.id_
-    return doc_name, doc_id, bucket_name
+    try:
+        bucket, bucket_name = initialize_b2api()
+        file_info = bucket.upload_bytes(
+            file_obj.read(), file_name=file_obj.name)
+        doc_name = file_obj.name
+        doc_id = file_info.id_
+        return doc_name, doc_id, bucket_name
+    except Exception as e:
+        raise ValidationError(detail={f"Error uploading document: {e}"})
 
 
 # Delete file from backblaze
 
 
 def delete_file_from_backblaze(id):
-    bucket, _ = initialize_b2api()
-    # Get file info by id
-    file_info = bucket.get_file_info_by_id(file_id=id)
-    # Delete file
-    delted_file = bucket.delete_file_version(
-        file_id=file_info.id_, file_name=file_info.file_name)
-    # Return deleted file info
-    return delted_file
+    if not id:
+        raise ValidationError(detail={'error': 'File id is required'})
+    try:
+        bucket, _ = initialize_b2api()
+        # Get file info by id
+        file_info = bucket.get_file_info_by_id(file_id=id)
+        # Delete file
+        delted_file = bucket.delete_file_version(
+            file_id=file_info.id_, file_name=file_info.file_name)
+        # Return deleted file info
+        return delted_file
+    except Exception as e:
+        raise ValidationError(detail={f"Error deleting file: {e}"})

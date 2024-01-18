@@ -15,13 +15,20 @@ from dog_card.serializer import DogCardSerializer
 @api_view(['GET'])
 def main_page_view(request):
     # Get news from database
-    news = News.objects.order_by('-post_at')[:4]
-    # Get dog cards from database
-    dog_cards = DogCardModel.objects.all()
-    # Serialize news and dog cards
-    news_serializer = NewsSerializer(news, many=True)
-    dog_card_serializer = DogCardSerializer(dog_cards, many=True)
-    return Response({'news_data': news_serializer.data, 'dog_cards': dog_card_serializer.data}, status=status.HTTP_200_OK)
+    try:
+        news = News.objects.order_by('-post_at')[:4]
+        # Get dog cards from database
+        dog_cards = DogCardModel.objects.all()
+
+        # Serialize news and dog cards
+        news_serializer = NewsSerializer(news, many=True)
+        dog_card_serializer = DogCardSerializer(dog_cards, many=True)
+        return Response({'news_data': news_serializer.data, 'dog_cards': dog_card_serializer.data}, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({'message': f'Помилка {e}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# Create news
 
 
 @api_view(['POST'])

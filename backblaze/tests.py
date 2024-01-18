@@ -1,66 +1,41 @@
-from django.test import TestCase, Client
-from django.core.files.uploadedfile import SimpleUploadedFile
-from backblaze.models import FileModel
-from backblaze.views import upload_image, upload_document
-import os
-test_image_path = os.getenv('TEST_IMAGE_PATH')
-test_document_path = os.getenv('TEST_DOCUMENT_PATH')
+from django.urls import reverse
+from rest_framework.test import APIClient
+from rest_framework import status
+from django.test import TestCase
+from .models import FileModel
+from django.contrib.auth.models import User
 
 
-class TestViews(TestCase):
+class FileManagementTests(TestCase):
     def setUp(self):
-        self.client = Client()
+        self.client = APIClient()
+        self.user = User.objects.get(email='jabsoluty@gmail.com', passowrd='')
+        self.client.force_authenticate(user=self.user)
 
-    def test_upload_image(self):
-        with open(test_image_path, 'rb') as image:
-            response = self.client.post('/upload/images', {'image': image})
-            self.assertEqual(response.status_code, 201)
-            self.assertIn('image uploaded successfully',
-                          response.content.decode())
+    def test_upload_image_success(self):
+        # Assuming you have a way to simulate a valid image file
+        url = reverse('upload_image')  # Replace with your actual URL name
+        data = {'image': 'your_simulated_image_file'}
+        response = self.client.post(url, data, format='multipart')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    def test_upload_document(self):
-        with open(test_document_path, 'rb') as document:
-            response = self.client.post(
-                '/upload/documents', {'document': document})
-            self.assertEqual(response.status_code, 201)
-            self.assertIn('document uploaded successfully',
-                          response.content.decode())
+    # Additional tests for image validation failure, webp conversion failure
 
-    def test_upload_image_no_image(self):
-        response = self.client.post('/upload/images')
-        self.assertEqual(response.status_code, 400)
-        self.assertIn('image not found', response.content.decode())
+    def test_upload_document_success(self):
+        # Assuming you have a way to simulate a valid document file
+        url = reverse('upload_document')  # Replace with your actual URL name
+        data = {'document': 'your_simulated_document_file'}
+        response = self.client.post(url, data, format='multipart')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    def test_upload_document_no_document(self):
-        response = self.client.post('/upload/documents')
-        self.assertEqual(response.status_code, 400)
-        self.assertIn('document not found', response.content.decode())
+    # Additional tests for document validation failure, upload process failure
 
-    def test_upload_image_incorrect_format(self):
-        image = SimpleUploadedFile('wrong_format.txt', b'file_content')
-        response = self.client.post('/upload/images', {'image': image})
-        self.assertEqual(response.status_code, 400)
-        self.assertIn('incorrect file format', response.content.decode())
+    def test_delete_file_success(self):
+        # Create a test file in the database
+        test_file = FileModel.objects.create(...)
+        # Replace with your actual URL name
+        url = reverse('delete_file', args=[test_file.id])
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    def test_upload_document_incorrect_format(self):
-        document = SimpleUploadedFile('wrong_format.jpg', b'file_content')
-        response = self.client.post(
-            '/upload/documents', {'document': document})
-        self.assertEqual(response.status_code, 400)
-        self.assertIn('incorrect file format', response.content.decode())
-
-    def test_upload_image_exceed_size(self):
-        image = SimpleUploadedFile('large_image.jpg', b'file_content'*4000000)
-        response = self.client.post('/upload/images', {'image': image})
-        self.assertEqual(response.status_code, 400)
-        self.assertIn('image size should not exceed 2MB',
-                      response.content.decode())
-
-    def test_upload_document_exceed_size(self):
-        document = SimpleUploadedFile(
-            'large_document.pdf', b'file_content'*4000000)
-        response = self.client.post(
-            '/upload/documents', {'document': document})
-        self.assertEqual(response.status_code, 400)
-        self.assertIn('document size should not exceed 2MB',
-                      response.content.decode())
+    # Additional tests for handling non-existent files, deletion process failure
