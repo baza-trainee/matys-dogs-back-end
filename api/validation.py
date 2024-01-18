@@ -18,9 +18,13 @@ def email_validation(email):
 
 def password_validation(password, confirmPassword):
 
+    if (password or confirmPassword) == '':
+        raise ValidationError(
+            {'error': 'Будь ласка, заповніть всі обов\'язкові поля'})
+
     password_regex = r'^(?=.*[A-Z])(?=.*[a-z])(?=.*[0-9])(?=.*[!-_)(.,]).{8,12}$'
     if not re.match(password_regex, password or confirmPassword):
         raise ValidationError(
-            {'error': 'Пароль повинен містити великі та малі букви, цифри та один з спеціальних символів '})
+            {'error': 'Пароль повинен містити великі та малі букви, цифри та один з спеціальних символів, і мати від 8 до 12 символів'})
     if password != confirmPassword:
         raise ValidationError({'error': 'Паролі не співпадають'})

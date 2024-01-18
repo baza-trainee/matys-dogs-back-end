@@ -13,10 +13,14 @@ from backblaze.models import FileModel
 
 
 @api_view(['GET'])
+@csrf_exempt
 def about(request):
-    about_data = AboutModel.objects.all()
-    serializer = AboutSerializer(about_data, many=True)
-    return Response({'about_data': serializer.data}, status=status.HTTP_200_OK)
+    try:
+        about_data = AboutModel.objects.all()
+        serializer = AboutSerializer(about_data, many=True)
+        return Response({'about_data': serializer.data}, status=status.HTTP_200_OK)
+    except AboutModel.DoesNotExist:
+        return Response({'message': 'About data not found'}, status=status.HTTP_404_NOT_FOUND)
 
 
 # @api_view(['GET', 'POST', 'PUT', 'DELETE'])
