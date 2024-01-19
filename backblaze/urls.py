@@ -1,8 +1,9 @@
 from django.urls import path
-from backblaze.views import upload_image, upload_document, delete_file
+from backblaze.views import UploadImage
 
 urlpatterns = [
-    path('images', upload_image, name='upload_image'),
-    path('documents', upload_document, name='upload_document'),
-    path('<str:file_id>', delete_file, name='delete_file'),
+    path('images', UploadImage.as_view(
+        {'post': 'create', 'get': 'list'}), name='upload_image'),
+    path('<str:file_id>', UploadImage.as_view(
+        {'delete': 'destroy'}), name='delete_file'),
 ]

@@ -4,6 +4,7 @@ from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from django.views.decorators.csrf import csrf_exempt
 from about.models import AboutModel
+from rest_framework.permissions import AllowAny
 from backblaze.utils.b2_utils import converter_to_webP
 from about.serializer import AboutSerializer
 from rest_framework import status
@@ -12,22 +13,33 @@ from backblaze.models import FileModel
 # get about data
 
 
-@api_view(['GET'])
-@csrf_exempt
-def about(request):
-    try:
-        about_data = AboutModel.objects.all()
-        serializer = AboutSerializer(about_data, many=True)
-        return Response({'about_data': serializer.data}, status=status.HTTP_200_OK)
-    except AboutModel.DoesNotExist:
-        return Response({'message': 'About data not found'}, status=status.HTTP_404_NOT_FOUND)
+class AboutList(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        try:
+            about_data = AboutModel.objects.all()
+            serializer = AboutSerializer(about_data, many=True)
+            return Response({'about_data': serializer.data}, status=status.HTTP_200_OK)
+        except AboutModel.DoesNotExist:
+            return Response({'message': 'About data not found'})
+
+# @api_view(['GET'])
+# @csrf_exempt
+# def about(request):
+#     try:
+#         about_data = AboutModel.objects.all()
+#         serializer = AboutSerializer(about_data, many=True)
+#         return Response({'about_data': serializer.data}, status=status.HTTP_200_OK)
+#     except AboutModel.DoesNotExist:
+#         return Response({'message': 'About data not found'}, status=status.HTTP_404_NOT_FOUND)
 
 
-# @api_view(['GET', 'POST', 'PUT', 'DELETE'])
-# @permission_classes([IsAuthenticated])
 class About(APIView):
+    permission_classes = [IsAuthenticated]
 
-    permission_classes = [IsAdminUser]
+    def get(self, request):
+        pass
 
     def post(self, request):
         # get data from request

@@ -1,6 +1,6 @@
 from django.urls import path
-from dog_card.views import search_dogs_cards
+from dog_card.views import DogCardSearch
 
 urlpatterns = [
-    path('catalog/', search_dogs_cards, name='search_dogs_cards')
+    path('catalog/', DogCardSearch.as_view(), name='search_dogs_cards')
 ]
