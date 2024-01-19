@@ -15,3 +15,6 @@ class NewsModel(models.Model):
 
     def photo_url(self):
         return self.photo.url
+
+    class Meta:
+        ordering = ['-post_at', '-update_at']
