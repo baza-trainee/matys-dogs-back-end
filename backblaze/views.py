@@ -13,42 +13,36 @@ from rest_framework.validators import ValidationError
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def upload_image(request):
-    try:
-        file_obj = request.FILES['image']
-        # Validate image
-        image_validation(file_obj)
-        # Convert image to webp
-        webp_image_name, webp_image_id, bucket_name, size = converter_to_webP(
-            file_obj)
-        # Save image to database
-        image_url = f'https://{bucket_name}.s3.us-east-005.backblazeb2.com/{webp_image_name}'
-        file_model = FileModel(id=webp_image_id, name=webp_image_name,
-                               url=image_url, category='image')
-        file_model.save()
+    uploaded_files = request.FILES.getlist('image')
+    response_data = []
 
-        return Response({'massage': 'Зображення успішно завантажено ',                    'image_url': image_url, 'image_id': webp_image_id, 'image_name': webp_image_name, 'size': size
-                         }, status=status.HTTP_200_OK)
-    except ValidationError as e:
-        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    for file_obj in uploaded_files:
+        try:
+            # Validate image
+            image_validation(file_obj)
 
+            # Convert image to webp
+            webp_image_name, webp_image_id, bucket_name, size = converter_to_webP(
+                file_obj)
 
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def upload_document(request):
-    try:
-        file_obj = request.FILES['document']
-        # Validate document
-        document_validation(file_obj)
-        # upload document
-        doc_name, doc_id, bucket_name = document_simplify_upd(file_obj)
-        # Save document to database
-        document_url = f'https://{bucket_name}.s3.us-east-005.backblazeb2.com/{doc_name}'
-        file_model = FileModel(id=doc_id,
-                               name=doc_name, url=document_url, category='document')
-        file_model.save()
-        return Response({'message': 'Документ успішно завантажений', 'document_url': document_url, 'document_id': doc_id, 'document_name': doc_name}, status=status.HTTP_200_OK)
-    except ValidationError as e:
-        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            # Save image to database
+            image_url = f'https://{bucket_name}.s3.us-east-005.backblazeb2.com/{webp_image_name}'
+            file_model = FileModel(id=webp_image_id, name=webp_image_name,
+                                   url=image_url, category='image')
+            file_model.save()
+
+            response_data.append({
+                'message': 'Зображення успішно завантажено',
+                'image_url': image_url,
+                'image_id': webp_image_id,
+                'image_name': webp_image_name,
+                'size': size
+            })
+
+        except ValidationError as e:
+            response_data.append({'error': str(e)})
+
+    return Response(response_data, status=status.HTTP_200_OK if response_data else status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['DELETE'])
@@ -76,3 +70,22 @@ def delete_file(request, file_id):
             return Response({'error': 'Файл не знайдено'}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return Response({'error': f'Неочікувана помилка: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def upload_document(request):
+    try:
+        file_obj = request.FILES['document']
+        # Validate document
+        document_validation(file_obj)
+        # upload document
+        doc_name, doc_id, bucket_name = document_simplify_upd(file_obj)
+        # Save document to database
+        document_url = f'https://{bucket_name}.s3.us-east-005.backblazeb2.com/{doc_name}'
+        file_model = FileModel(id=doc_id,
+                               name=doc_name, url=document_url, category='document')
+        file_model.save()
+        return Response({'message': 'Документ успішно завантажений', 'document_url': document_url, 'document_id': doc_id, 'document_name': doc_name}, status=status.HTTP_200_OK)
+    except ValidationError as e:
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
