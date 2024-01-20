@@ -46,6 +46,6 @@ RUN adduser --disabled-password --no-create-home django-user && \
     chmod -R 755 /vol/web/
 # Define the default command to run when starting the container
 # Using gunicorn as the WSGI HTTP server
-ENTRYPOINT ["gunicorn", "server_DJ.wsgi:application", "--bind", "0.0.0.0:8000"]
-
+# ENTRYPOINT ["gunicorn", "server_DJ.wsgi:application", "--bind", "0.0.0.0:8000"]
+CMD gunicorn server_DJ.wsgi:application --bind 0.0.0.0:8000
 
