@@ -14,6 +14,8 @@ services:
       - .env
     depends_on:
       - db
+    environment:
+      - PORT=8000
 
   nginx:
     restart: always
