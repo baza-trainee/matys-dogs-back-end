@@ -48,5 +48,4 @@ RUN adduser --disabled-password --no-create-home django-user && \
 # Using gunicorn as the WSGI HTTP server
 ENTRYPOINT ["gunicorn", "server_DJ.wsgi:application", "--bind", "0.0.0.0:8000"]
 
-# Expose the port the app runs on
-EXPOSE 8000
+
