@@ -17,7 +17,7 @@ services:
 
   nginx:
     restart: always
-    image: nginx:alpine
+    build: ./nginx
     ports:
       - "80:80"
     volumes:
