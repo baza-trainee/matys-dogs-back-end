@@ -12,19 +12,34 @@ from dog_card.serializer import DogCardSerializer
 from rest_framework.permissions import AllowAny
 from rest_framework.viewsets import GenericViewSet
 from rest_framework import mixins
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 # Create your views here.
 
 
 class main_page_view(APIView):
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name="Accept-Language",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.HEADER,
+                required=False,
+                description="Language code to get the content in a specific language (e.g., en, uk)",
+                enum=["en", "uk"],
+            ),
+        ]
+    )
     def get(self, request):
         # Get news from database
         try:
-            news = News.objects.order_by('-post_at')[:4]
+            news = News.objects.all()[:4]
             dog_cards = DogCardModel.objects.all()
             # Serialize news and dog cards
-            news_serializer = NewsSerializer(news, many=True)
+            news_serializer = NewsSerializer(
+                news, many=True, context={'request': request})
             dog_card_serializer = DogCardSerializer(dog_cards, many=True)
             return Response({'news_data': news_serializer.data, 'dog_cards': dog_card_serializer.data}, status=status.HTTP_200_OK)
         except Exception as e:
