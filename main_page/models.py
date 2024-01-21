@@ -18,3 +18,16 @@ class NewsModel(models.Model):
 
     class Meta:
         ordering = ['-post_at', '-update_at']
+
+
+class Partners(models.Model):
+    id = models.AutoField(primary_key=True)
+    name = models.CharField(max_length=45)
+    logo = models.ForeignKey(
+        FileModel, on_delete=models.CASCADE, null=True, blank=True)
+
+    def logo_url(self):
+        return self.logo.url
+
+    class Meta:
+        ordering = ['name']
