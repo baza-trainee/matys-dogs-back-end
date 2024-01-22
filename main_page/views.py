@@ -14,6 +14,7 @@ from rest_framework.viewsets import GenericViewSet
 from rest_framework import mixins
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema, OpenApiParameter
+from django.core.cache import cache
 # Create your views here.
 
 
@@ -34,6 +35,9 @@ class main_page_view(APIView):
     )
     def get(self, request):
         # Get news from database
+        chached_data = cache.get('main_page_data')
+        if chached_data:
+            return Response(chached_data, status=status.HTTP_200_OK)
         try:
             news = News.objects.all()[:4]
             dog_cards = DogCardModel.objects.all()
@@ -41,7 +45,20 @@ class main_page_view(APIView):
             news_serializer = NewsSerializer(
                 news, many=True, context={'request': request})
             dog_card_serializer = DogCardSerializer(dog_cards, many=True)
-            return Response({'news_data': news_serializer.data, 'dog_cards': dog_card_serializer.data}, status=status.HTTP_200_OK)
+            response_data = {
+                'news_data':  news_serializer.data,
+                'dog_cards': dog_card_serializer.data
+            }
+
+            cache.set('main_page_data', response_data)
+            return Response(response_data, status=status.HTTP_200_OK)
+
+        except News.DoesNotExist:
+            # Specific exception handling
+            return Response({'message': 'News not found'}, status=status.HTTP_404_NOT_FOUND)
+        except DogCardModel.DoesNotExist:
+            # Specific exception handling
+            return Response({'message': 'Dog cards not found'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({'message': f'Помилка {e}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -51,6 +68,14 @@ class NewsAdminView(mixins.ListModelMixin, mixins.CreateModelMixin, GenericViewS
     queryset = News.objects.all()
     serializer_class = NewsSerializer
 
+    @extend_schema(
+        summary='List News Items',
+        description='Retrieves a list of all news items.',
+        responses={
+            200: NewsSerializer(many=True),
+            404: {'description': 'News not found'}
+        }
+    )
     def list(self, request, *args, **kwargs):
         queryset = super().get_queryset()
         serializer = NewsSerializer(queryset, many=True)
@@ -59,7 +84,15 @@ class NewsAdminView(mixins.ListModelMixin, mixins.CreateModelMixin, GenericViewS
         return Response({"news": serializer.data})
 
     # Create news
-
+    @extend_schema(
+        summary='Create a News Item',
+        description='Creates a new news item with the given details.',
+        request=NewsSerializer,
+        responses={
+            201: NewsSerializer,
+            400: {'description': 'Invalid data'}
+        }
+    )
     def create(self, request, *args, **kwargs):
         title = request.data['title']
         sub_text = request.data['sub_text']
