@@ -19,18 +19,19 @@ class NewsSerializer(ModelSerializer):
 
         # Check if the request is part of the serializer context
         if 'request' in self.context:
-            language = self.context['request'].headers.get(
-                'Accept-Language', '').lower()
+
+            language = self.context.get('language')
+            if not language:
+                language = self.context['request'].headers.get(
+                    'Accept-Language', '').lower()
 
             # Assign the language-specific fields to the main dictionary
             ret['title'] = instance.title_en if language == 'en' else instance.title_uk
             ret['sub_text'] = instance.sub_text_en if language == 'en' else instance.sub_text_uk
 
             # Remove the language-specific fields from the representation
-            ret.pop('title_uk', None)
-            ret.pop('title_en', None)
-            ret.pop('sub_text_uk', None)
-            ret.pop('sub_text_en', None)
+            for field in ['title_uk', 'title_en', 'sub_text_uk', 'sub_text_en']:
+                ret.pop(field, None)
 
         return ret
 

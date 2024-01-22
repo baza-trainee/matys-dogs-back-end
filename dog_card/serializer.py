@@ -30,15 +30,7 @@ class DogCardSerializer(ModelSerializer):
             ret['size'] = instance.size_en if language == 'en' else instance.size_uk
             ret['age'] = instance.age_en if language == 'en' else instance.age_uk
 
-            ret.pop('name_en', None)
-            ret.pop('name_uk', None)
-            ret.pop('description_en', None)
-            ret.pop('description_uk', None)
-            ret.pop('gender_en', None)
-            ret.pop('gender_uk', None)
-            ret.pop('size_en', None)
-            ret.pop('size_uk', None)
-            ret.pop('age_en', None)
-            ret.pop('age_uk', None)
+            for field in ['name_en', 'name_uk', 'description_en', 'description_uk', 'gender_en', 'gender_uk', 'size_en', 'size_uk', 'age_en']:
+                ret.pop(field, None)
 
         return ret

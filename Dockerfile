@@ -17,7 +17,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     libffi-dev \
     libcairo2 \
-    && rm -rf /var/lib/apt/lists/*  # Clean up to reduce layer size
+    && rm -rf /var/lib/apt/lists/* 
 
 # Upgrade pip and install virtualenv for isolated Python environments
 RUN pip install --upgrade pip \
@@ -25,7 +25,6 @@ RUN pip install --upgrade pip \
 
 # Create and activate a virtual environment
 RUN python -m virtualenv venv
-
 ENV PATH="/app/venv/bin:$PATH"
 
 
@@ -40,18 +39,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the rest of the project files into the container
 COPY . .
 
+VOLUME /app/media /vol/web/media
 RUN mkdir -p /vol/web/media
 RUN mkdir -p /app/staticfiles
 
-RUN adduser --disabled-password --no-create-home django-user && \
-    chown -R django-user:django-user /vol/ && \
-    chmod -R 755 /vol/web/
-
-
 # Define the default command to run when starting the container
 # Using gunicorn as the WSGI HTTP server
-
-
 ENTRYPOINT ["gunicorn", "server_DJ.wsgi:application", "--bind", "0.0.0.0:8000"]
 
 
