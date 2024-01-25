@@ -18,6 +18,14 @@ import json
 class AboutList(mixins.ListModelMixin, GenericViewSet):
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        summary='Retrieve about data',
+        description="Retrieve about data",
+        responses={
+            200: AboutSerializer(many=True),
+            404: {'description': 'About data not found'}
+        }
+    )
     def get(self, request):
         try:
             about_data = AboutModel.objects.all()
@@ -32,6 +40,7 @@ class AboutImages(mixins.ListModelMixin, mixins.CreateModelMixin, GenericViewSet
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
+        summary='List all images in AboutModel',
         description="List all images in AboutModel",
         responses={200: ImagesSerializer(many=True), 404: 'Images not found'}
     )
@@ -46,6 +55,7 @@ class AboutImages(mixins.ListModelMixin, mixins.CreateModelMixin, GenericViewSet
             return Response({'message': f'Unexpected error occurred: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @extend_schema(
+        summary='Create a new image entry in AboutModel',
         description="Create a new image entry in AboutModel",
         responses={201: FileSerializer, 404: 'Файл не знайдено'}
     )
@@ -82,6 +92,7 @@ class AboutImages(mixins.ListModelMixin, mixins.CreateModelMixin, GenericViewSet
             return Response({'message': f'Unexpected error occurred: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @extend_schema(
+        summary='Delete an image from AboutModel',
         description="Delete an image from AboutModel",
         responses={200: 'Зображення видалено', 404: 'Файл не знайдено'}
     )
@@ -111,11 +122,12 @@ class AboutEmployment(mixins.ListModelMixin, mixins.CreateModelMixin, GenericVie
     serializer_class = EmploymentSerializer
 
     @extend_schema(
+        summary='Get employment data from AboutModel',
         description="Get employment data from AboutModel",
         request=EmploymentSerializer,
         responses={
             200: EmploymentSerializer,
-            500: {'description': 'Internal Server Error'}
+            500: {'description': 'Внутрішня помилка сервера'}
         }
     )
     def get(self, request):
@@ -128,12 +140,13 @@ class AboutEmployment(mixins.ListModelMixin, mixins.CreateModelMixin, GenericVie
 
     # Update employment data
     @extend_schema(
+        summary='Update employment data in AboutModel',
         description="Update employment data in AboutModel",
         request=EmploymentSerializer,
         responses={
             200: EmploymentSerializer,
-            404: {'description': 'About data not found'},
-            500: {'description': 'Internal Server Error'}
+            404: {'description': 'Про дані не знайдено'},
+            500: {'description': 'Внутрішня помилка сервера'}
         }
     )
     def update(self, request):
@@ -152,6 +165,6 @@ class AboutEmployment(mixins.ListModelMixin, mixins.CreateModelMixin, GenericVie
             serializer = EmploymentSerializer(about)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except AboutModel.DoesNotExist:
-            return Response({'message': 'About data not found'})
+            return Response({'message': 'Про дані не знайдено'})
         except Exception as e:
             return Response({'message': f'Помилка {e}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
