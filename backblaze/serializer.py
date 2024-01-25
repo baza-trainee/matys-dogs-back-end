@@ -5,4 +5,4 @@ from backblaze.models import FileModel
 class FileSerializer(ModelSerializer):
     class Meta:
         model = FileModel
-        fields = ['id', 'name', 'url', 'category']
+        fields = ('id', 'name', 'url', 'category')
