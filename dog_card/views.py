@@ -11,8 +11,8 @@ from rest_framework.permissions import IsAuthenticated
 from backblaze.models import FileModel
 from backblaze.utils.b2_utils import converter_to_webP
 from backblaze.utils.validation import image_validation
-from drf_spectacular.utils import extend_schema
-from drf_spectacular.types import OpenApiParameter
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 # Create your views here.
 
 
@@ -36,6 +36,7 @@ class DogCardSearch(mixins.ListModelMixin, GenericViewSet):
         return searched_cards
 
     @extend_schema(
+        summary='Search dog cards',
         description="Search dog cards based on various criteria",
         parameters=[
             OpenApiParameter(
@@ -97,6 +98,7 @@ class DogCardView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateM
         return dog_card.photo
 
     @extend_schema(
+        summary='List all dog cards',
         description="List all dog cards",
         responses={200: DogCardSerializer(many=True)}
     )
@@ -106,6 +108,7 @@ class DogCardView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateM
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @extend_schema(
+        summary='Create a new dog card',
         description="Create a new dog card",
         request=DogCardSerializer,
         responses={201: DogCardSerializer, 500: 'Internal Server Error'}
@@ -126,6 +129,7 @@ class DogCardView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateM
             return Response({'message': f'Помилка {e}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @extend_schema(
+        summary='Update an existing dog card',
         description="Update an existing dog card",
         request=DogCardSerializer,
         responses={200: DogCardSerializer,
@@ -151,6 +155,7 @@ class DogCardView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateM
             return Response({'message': f'Помилка {e}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @extend_schema(
+        summary='Delete a dog card',
         description="Delete a dog card",
         responses={200: 'Dog card deleted',
                    404: 'Dog card not found', 500: 'Internal Server Error'}
