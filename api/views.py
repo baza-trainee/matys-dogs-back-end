@@ -9,9 +9,12 @@ from rest_framework.viewsets import ViewSet
 from rest_framework import status
 from django.contrib.auth.models import User
 from rest_framework_simplejwt.tokens import RefreshToken
+from .models import UserMini
 from django.conf import settings
 from rest_framework.permissions import AllowAny
 from rest_framework.decorators import action
+from django.contrib.auth.hashers import make_password
+from drf_spectacular.utils import extend_schema
 import json
 import os
 import re
@@ -53,30 +56,42 @@ class AuthenticationService(ViewSet):
 
     def get_queryset(self):
         # Return an empty queryset
-        return User.objects.none()
+        return UserMini.objects.none()
 
+    @extend_schema(
+        description="Register a new user",
+        responses={201: None, 400: 'Registration error'}
+    )
     @action(detail=False, methods=['POST'], url_path='register')
     def register(self, request):
         data = json.loads(request.body)
         email = data['email']
         password = data['password']
         confirmPassword = data['confirmPassword']
+        first_name = data['first_name']
+        last_name = data['last_name']
         # check if the password is valid
         self.email_validation(email=email)
         self.password_validation(
             password=password, confirmPassword=confirmPassword)
     # check if the user is already exist
-        user = User.objects.filter(email=email).first()
+        user = UserMini.objects.filter(email=email).first()
         if user:
             raise ValidationError(
                 {'error': 'Помилка регистрації.'})
+
     # create a new user
-        new_user = User.objects.create_user(
-            username='admin',
-            email=email, password=password)
+        new_user = UserMini.objects.create(
+            first_name=first_name, last_name=last_name,
+            email=email, password=make_password(password)
+        )
         new_user.save()
         return Response({'message': 'Користувач зареєстрований', 'email': email}, status=status.HTTP_201_CREATED)
 
+    @extend_schema(
+        description="Log in a user",
+        responses={200: None, 400: 'Invalid email or password'}
+    )
     @action(detail=False, methods=['POST'], url_path='login')
     def login(self, request):
         data = json.loads(request.body)
@@ -84,16 +99,25 @@ class AuthenticationService(ViewSet):
         password = data['password']
         # check if the data is valid
         self.email_validation(email=email)
-        user = User.objects.filter(email=email).first()
-        if not user:
+        user = UserMini.objects.filter(email=email).first()
+        admin = User.objects.filter(email=email).first()
+        if not user or not admin:
             raise ValidationError({'error': 'Пошта або пароль не існують'})
         if not check_password(password, user.password):
             raise ValidationError({'error': 'Неправильний пароль'})
+        if user:
+            refesh = RefreshToken.for_user(user)
+            accsess = str(refesh.access_token)
+        elif admin:
+            refesh = RefreshToken.for_user(admin)
+            accsess = str(refesh.access_token)
 
-        refesh = RefreshToken.for_user(user)
-        accsess = str(refesh.access_token)
         return Response({'message': 'Користувач увійшов в систему', 'access_token': accsess}, status=status.HTTP_200_OK)
 
+    @extend_schema(
+        description="Reset password",
+        responses={200: None, 400: 'Invalid token or request'}
+    )
     @action(detail=False, methods=['POST'], url_path='reset-password/<uidb64>/<token>')
     def reset_password(self, request, uidb64, token):
         try:
@@ -103,7 +127,7 @@ class AuthenticationService(ViewSet):
             self.password_validation(
                 password=password, confirmPassword=confirmPassword)
             uid = force_str(urlsafe_base64_decode(uidb64))
-            user = User.objects.get(pk=uid)
+            user = UserMini.objects.get(pk=uid)
 
             if default_token_generator.check_token(user, token):
                 user.set_password(password)
@@ -114,6 +138,10 @@ class AuthenticationService(ViewSet):
         except (TypeError, ValueError, OverflowError, User.DoesNotExist) as e:
             return Response({'error': f'Невірний запит {e}'}, status=status.HTTP_400_BAD_REQUEST)
 
+    @extend_schema(
+        description="Forgot password",
+        responses={200: None, 400: 'Email does not exist'}
+    )
     @action(detail=False, methods=['POST'], url_path='forgot-password')
     def forgot_password(self, request):
         data = json.loads(request.body)
@@ -121,7 +149,7 @@ class AuthenticationService(ViewSet):
         self.email_validation(email=email)
         try:
             domain = os.environ.get('DOMAIN')
-            user = User.objects.get(email=email)
+            user = UserMini.objects.get(email=email)
             token = default_token_generator.make_token(user)
             uid = urlsafe_base64_encode(force_bytes(user.pk))
             password_reset_link = f'{domain}/reset-passoword/{uid}/{token}'
@@ -135,83 +163,3 @@ class AuthenticationService(ViewSet):
             return Response({"message": "Електронна пошта була успішно надіслана"})
         except User.DoesNotExist:
             return Response({"error": "Електронна пошта не існує"}, status=status.HTTP_400_BAD_REQUEST)
-
-# @api_view(['POST'])
-# def register(request):
-#     # get the data from the request
-#     data = json.loads(request.body)
-#     # check if the password is valid
-#     email_validation(data['email'])
-#     password_validation(data['password'], data['confirmPassword'])
-#     # check if the user is already exist
-#     user = User.objects.filter(email=data['email']).first()
-#     if user:
-#         raise ValidationError(
-#             {'error': 'Помилка регистрації.'}, status=status.HTTP_400_BAD_REQUEST)
-#     # create a new user
-#     new_user = User.objects.create_user(
-#         username='admin',
-#         email=data['email'], password=data['password'])
-#     new_user.save()
-#     return Response({'message': 'Користувач зареєстрований', 'email': data['email']}, status=status.HTTP_201_CREATED)
-
-
-# @api_view(['POST'])
-# def login(request):
-#     # get the data from the request
-#     data = json.loads(request.body)
-#     # check if the data is valid
-#     email_validation(data['email'])
-#     # check if the user is exist
-#     user = User.objects.filter(email=data['email']).first()
-#     if not user:
-#         raise ValidationError({'error': 'Пошта або пароль не існують'})
-#     # check if the password is correct
-#     if not check_password(data['password'], user.password):
-#         raise ValidationError({'error': 'Неправильний пароль'})
-#     # create a refresh token
-#     refesh = RefreshToken.for_user(user)
-#     # create a access token
-#     accsess = str(refesh.access_token)
-#     return Response({'message': 'Користувач увійшов в систему', 'access_token': accsess, }, status=status.HTTP_200_OK)
-
-
-# @api_view(['POST'])
-# def reset_password(request, uidb64, token):
-#     try:
-#         new_password_data = json.loads(request.body)
-#         password_validation(
-#             new_password_data['password'], new_password_data['confirmPassword'])
-
-#         uid = force_str(urlsafe_base64_decode(uidb64))
-#         user = User.objects.get(pk=uid)
-
-#         if default_token_generator.check_token(user, token):
-#             user.set_password(new_password_data['password'])
-#             user.save()
-#             return Response({'message': 'Скидання пароля Успішні'}, status=status.HTTP_200_OK)
-#         else:
-#             return Response({'error': 'Неприпустимий токен'}, status=status.HTTP_400_BAD_REQUEST)
-#     except (TypeError, ValueError, OverflowError, User.DoesNotExist):
-#         return Response({'error': 'Невірний запит'}, status=status.HTTP_400_BAD_REQUEST)
-
-
-# @api_view(['POST'])
-# def forgot_password(request):
-#     data = json.loads(request.body)
-#     try:
-#         domain = os.environ.get('DOMAIN')
-#         user = User.objects.get(email=data['email'])
-#         token = default_token_generator.make_token(user)
-#         uid = urlsafe_base64_encode(force_bytes(user.pk))
-#         password_reset_link = f'{domain}/reset-passoword/{uid}/{token}'
-#         send_mail(
-#             'Скинути пароль',
-#             f'Клацніть, щоб посилання на скидання пароля : {password_reset_link}',
-#             settings.EMAIL_HOST_USER,
-#             [data['email']],
-#             fail_silently=False,
-#         )
-#         return Response({"message": "Електронна пошта була успішно надіслана"})
-#     except User.DoesNotExist:
-#         return Response({"error": "Електронна пошта не існує"}, status=status.HTTP_400_BAD_REQUEST)

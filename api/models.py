@@ -11,14 +11,13 @@ class CustomUser(User):
         super().save(*args, **kwargs)
 
 
-class BasicAdmin():
+class UserMini(models.Model):
     id = models.AutoField(primary_key=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    name = models.CharField(max_length=255, null=True, blank=True)
-    password = models.CharField(max_length=255, null=True, blank=True)
-    email = models.EmailField(max_length=255, null=True, blank=True)
-    is_approved = models.BooleanField(default=False)
+    email = models.EmailField(max_length=100, unique=True)
+    password = models.CharField(max_length=150)
+    first_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100)
+    is_aproved = models.BooleanField(default=False)
 
-    class Meta:
-        abstract = True
+    def __str__(self):
+        return f"{self.first_name} {self.last_name}"

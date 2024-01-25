@@ -10,3 +10,18 @@ class AboutSerializer(ModelSerializer):
         model = AboutModel
         fields = ['quantity_of_animals', 'quantity_of_employees',
                   'quantity_of_succeeds_adoptions', 'images']
+
+
+class ImagesSerializer(ModelSerializer):
+    images = FileSerializer(many=True)
+
+    class Meta:
+        model = AboutModel
+        fields = ['images']
+
+
+class EmploymentSerializer(ModelSerializer):
+    class Meta:
+        model = AboutModel
+        fields = ['quantity_of_employees',
+                  'quantity_of_succeeds_adoptions', 'quantity_of_animals']
