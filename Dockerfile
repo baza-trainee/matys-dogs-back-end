@@ -43,6 +43,8 @@ VOLUME /app/media /vol/web/media
 RUN mkdir -p /vol/web/media
 RUN mkdir -p /app/staticfiles
 
+
+EXPOSE 8000
 # Define the default command to run when starting the container
 # Using gunicorn as the WSGI HTTP server
 ENTRYPOINT ["gunicorn", "server_DJ.wsgi:application", "--bind", "0.0.0.0:8000"]
