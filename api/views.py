@@ -13,8 +13,8 @@ from .models import UserMini
 from django.conf import settings
 from rest_framework.permissions import AllowAny
 from rest_framework.decorators import action
-from django.contrib.auth.hashers import make_password
 from drf_spectacular.utils import extend_schema
+from django.contrib.auth.hashers import make_password
 import json
 import os
 import re
@@ -56,7 +56,7 @@ class AuthenticationService(ViewSet):
 
     def get_queryset(self):
         # Return an empty queryset
-        return UserMini.objects.none()
+        return User.objects.none()
 
     @extend_schema(
         description="Register a new user",
@@ -65,28 +65,25 @@ class AuthenticationService(ViewSet):
     @action(detail=False, methods=['POST'], url_path='register')
     def register(self, request):
         data = json.loads(request.body)
-        email = data['email']
-        password = data['password']
-        confirmPassword = data['confirmPassword']
-        first_name = data['first_name']
-        last_name = data['last_name']
+
         # check if the password is valid
-        self.email_validation(email=email)
+        self.email_validation(email=data['email'])
         self.password_validation(
-            password=password, confirmPassword=confirmPassword)
+            password=data['password'], confirmPassword=data['confirmPassword'])
+
     # check if the user is already exist
-        user = UserMini.objects.filter(email=email).first()
-        if user:
+        if User.objects.filter(email=data['email']).exists():
             raise ValidationError(
-                {'error': 'Помилка регистрації.'})
+                {'error': 'Помилка регистрації. Користувач вже існує.'})
 
     # create a new user
-        new_user = UserMini.objects.create(
-            first_name=first_name, last_name=last_name,
-            email=email, password=make_password(password)
-        )
-        new_user.save()
-        return Response({'message': 'Користувач зареєстрований', 'email': email}, status=status.HTTP_201_CREATED)
+        user = User.objects.create(username=data['email'],
+                                   first_name=data['first_name'], last_name=data['last_name'],
+                                   email=data['email'], password=make_password(
+                                       data['password'])
+                                   )
+        UserMini.objects.create(user=user)
+        return Response({'message': 'Користувач зареєстрований', 'email': data['email']}, status=status.HTTP_201_CREATED)
 
     @extend_schema(
         description="Log in a user",
@@ -102,17 +99,15 @@ class AuthenticationService(ViewSet):
             raise ValidationError(
                 {'error': 'Електронна пошта та пароль потрібні'})
 
-        user = UserMini.objects.filter(email=email).first()
-        admin = User.objects.filter(email=email).first()
+        user = User.objects.filter(email=email).first()
 
-        user_to_authenticate = admin if admin else user
-        if not user_to_authenticate:
+        if not user:
             raise ValidationError({'error': 'Користувач не знайдений'})
 
-        if not check_password(password, user_to_authenticate.password):
+        if not check_password(password, user.password):
             raise ValidationError({'error': 'Неправильний пароль'})
-        
-        refresh = RefreshToken.for_user(user_to_authenticate)
+
+        refresh = RefreshToken.for_user(user)
         accsess = str(refresh.access_token)
 
         return Response({'message': 'Користувач увійшов в систему', 'access_token': accsess}, status=status.HTTP_200_OK)
@@ -130,7 +125,7 @@ class AuthenticationService(ViewSet):
             self.password_validation(
                 password=password, confirmPassword=confirmPassword)
             uid = force_str(urlsafe_base64_decode(uidb64))
-            user = UserMini.objects.get(pk=uid)
+            user = User.objects.get(pk=uid)
 
             if default_token_generator.check_token(user, token):
                 user.set_password(password)
@@ -152,7 +147,7 @@ class AuthenticationService(ViewSet):
         self.email_validation(email=email)
         try:
             domain = os.environ.get('DOMAIN')
-            user = UserMini.objects.get(email=email)
+            user = User.objects.get(email=email)
             token = default_token_generator.make_token(user)
             uid = urlsafe_base64_encode(force_bytes(user.pk))
             password_reset_link = f'{domain}/reset-passoword/{uid}/{token}'
