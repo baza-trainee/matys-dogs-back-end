@@ -161,6 +161,7 @@ SPECTACULAR_SETTINGS = {
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(days=30),
 }
+
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/
 

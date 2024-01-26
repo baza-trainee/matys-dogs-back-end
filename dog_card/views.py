@@ -13,6 +13,7 @@ from backblaze.utils.b2_utils import converter_to_webP
 from backblaze.utils.validation import image_validation
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema, OpenApiParameter
+from api.models import IsApprovedUser
 # Create your views here.
 
 
@@ -83,7 +84,7 @@ class DogCardSearch(mixins.ListModelMixin, GenericViewSet):
 
 
 class DogCardView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.DestroyModelMixin, GenericViewSet):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsApprovedUser]
     queryset = DogCardModel.objects.all()
     serializer_class = DogCardSerializer
 

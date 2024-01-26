@@ -13,6 +13,7 @@ from rest_framework.viewsets import GenericViewSet
 from rest_framework import mixins
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema, OpenApiParameter
+from api.models import IsApprovedUser
 
 # Create your views here.
 
@@ -61,7 +62,7 @@ class main_page_view(mixins.ListModelMixin, GenericViewSet):
 
 
 class NewsView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.DestroyModelMixin, GenericViewSet):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsApprovedUser]
     queryset = News.objects.all()
     serializer_class = NewsSerializer
 
@@ -106,6 +107,12 @@ class NewsView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateMode
         new_news = News.objects.create(
             title=title, sub_text=sub_text, url=url, photo=new_file)
         news_serializer = NewsSerializer(new_news)
+
+        if News.objects.count > 5:
+            old_news = News.objects.last()
+            file = FileModel.objects.get(id=old_news.photo.id)
+            file.delete()
+            old_news.delete()
 
         return Response({'massage': 'news was created', 'news': news_serializer.data
                          }, status=status.HTTP_201_CREATED)
@@ -171,6 +178,7 @@ class NewsView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateMode
 # Partners
 class PartnersView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.DestroyModelMixin, GenericViewSet):
     queryset = Partners.objects.all()
+    permission_classes = [IsAuthenticated, IsApprovedUser]
     serializer_class = PartnerSerializer
 
     @extend_schema(

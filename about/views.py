@@ -11,6 +11,7 @@ from backblaze.serializer import FileSerializer
 from rest_framework.viewsets import GenericViewSet
 from rest_framework import mixins
 from drf_spectacular.utils import extend_schema
+from api.models import IsApprovedUser
 import json
 # get about data
 
@@ -37,7 +38,7 @@ class AboutList(mixins.ListModelMixin, GenericViewSet):
 
 # About Images
 class AboutImages(mixins.ListModelMixin, mixins.CreateModelMixin, GenericViewSet):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsApprovedUser]
 
     @extend_schema(
         summary='List all images in AboutModel',
@@ -117,7 +118,7 @@ class AboutImages(mixins.ListModelMixin, mixins.CreateModelMixin, GenericViewSet
 
 # Employment data
 class AboutEmployment(mixins.ListModelMixin, mixins.CreateModelMixin, GenericViewSet):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsApprovedUser]
     queryset = AboutModel.objects.all()
     serializer_class = EmploymentSerializer
 
