@@ -19,28 +19,37 @@ from drf_spectacular.utils import extend_schema, OpenApiParameter
 class DogCardSearch(mixins.ListModelMixin, GenericViewSet):
     permission_classes = [AllowAny]
 
-    def search_dogs_cards(self, *, name, size, gender, ready_for_adoption):
+    def search_dogs_cards(self, *, age, size, gender, ready_for_adoption):
         query = Q()
-        if name:
-            query &= Q(name__icontains=name)
+        if age:
+            normilized_age = self.normalize_age(age)
+            query &= Q(age__icontains=normilized_age)
         if size:
             query &= Q(size__icontains=size)
         if gender:
             query &= Q(gender__icontains=gender)
         if ready_for_adoption:
             query &= Q(ready_for_adoption__icontains=ready_for_adoption)
-        if not any([name, size, gender, ready_for_adoption]):
+        if not any([age, size, gender, ready_for_adoption]):
             return DogCardModel.objects.all()
 
         searched_cards = DogCardModel.objects.filter(query)
         return searched_cards
+
+    def normalize_age(self, age):
+        # Replace common age-related terms to their Ukrainian equivalents
+        # assuming 'years' and 'months' are provided in English by the users
+        age = age.lower().replace('years', 'років').replace(
+            'year', 'рік').replace('months', 'місяців').replace('month', 'місяць')
+        age = ' '.join(age.split())
+        return age
 
     @extend_schema(
         summary='Search dog cards',
         description="Search dog cards based on various criteria",
         parameters=[
             OpenApiParameter(
-                name='name', description='Search by dog name', required=False, type=str),
+                name='age', description='Search by dog age', required=False, type=str),
             OpenApiParameter(
                 name='size', description='Search by dog size', required=False, type=str),
             OpenApiParameter(
@@ -56,14 +65,14 @@ class DogCardSearch(mixins.ListModelMixin, GenericViewSet):
     )
     def list(self, request):
         try:
-            search_name = request.GET.get('name', '')
+            search_age = request.GET.get('age', '')
             search_size = request.GET.get('size', '')
             search_gender = request.GET.get('gender', '')
             serach_ready_for_adoption = request.GET.get(
                 'ready_for_adoption', '')
 
             searched_dogs_cards = self.search_dogs_cards(
-                name=search_name, size=search_size, gender=search_gender, ready_for_adoption=serach_ready_for_adoption)
+                age=search_age, size=search_size, gender=search_gender, ready_for_adoption=serach_ready_for_adoption)
             if searched_dogs_cards:
                 serializers = DogCardSerializer(searched_dogs_cards, many=True)
                 return Response({'Cards': serializers.data})
