@@ -97,20 +97,23 @@ class AuthenticationService(ViewSet):
         data = json.loads(request.body)
         email = data['email']
         password = data['password']
-        # check if the data is valid
-        self.email_validation(email=email)
+
+        if not email or not password:
+            raise ValidationError(
+                {'error': 'Електронна пошта та пароль потрібні'})
+
         user = UserMini.objects.filter(email=email).first()
         admin = User.objects.filter(email=email).first()
-        if not user or not admin:
-            raise ValidationError({'error': 'Пошта або пароль не існують'})
-        if not check_password(password, user.password):
+
+        user_to_authenticate = admin if admin else user
+        if not user_to_authenticate:
+            raise ValidationError({'error': 'Користувач не знайдений'})
+
+        if not check_password(password, user_to_authenticate.password):
             raise ValidationError({'error': 'Неправильний пароль'})
-        if user:
-            refesh = RefreshToken.for_user(user)
-            accsess = str(refesh.access_token)
-        elif admin:
-            refesh = RefreshToken.for_user(admin)
-            accsess = str(refesh.access_token)
+        
+        refresh = RefreshToken.for_user(user_to_authenticate)
+        accsess = str(refresh.access_token)
 
         return Response({'message': 'Користувач увійшов в систему', 'access_token': accsess}, status=status.HTTP_200_OK)
 
