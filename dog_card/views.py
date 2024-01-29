@@ -9,7 +9,7 @@ from rest_framework import mixins
 from rest_framework.viewsets import GenericViewSet
 from rest_framework.permissions import IsAuthenticated
 from backblaze.models import FileModel
-from backblaze.utils.b2_utils import converter_to_webP
+from backblaze.utils.b2_utils import converter_to_webP, delete_file_from_backblaze
 from backblaze.utils.validation import image_validation
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema, OpenApiParameter
@@ -48,7 +48,16 @@ class DogCardSearch(mixins.ListModelMixin, GenericViewSet):
     @extend_schema(
         summary='Search dog cards',
         description="Search dog cards based on various criteria",
+
         parameters=[
+            OpenApiParameter(
+                name="Accept-Language",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.HEADER,
+                required=False,
+                description="Language code to get the content in a specific language (e.g., en, uk)",
+                enum=["en", "uk"],
+            ),
             OpenApiParameter(
                 name='age', description='Search by dog age', required=False, type=str),
             OpenApiParameter(
@@ -60,8 +69,8 @@ class DogCardSearch(mixins.ListModelMixin, GenericViewSet):
         ],
         responses={
             200: DogCardSerializer(many=True),
-            404: {'description': 'No cards found matching the criteria'},
-            500: {'description': 'Internal Server Error'}
+            404: {'description': 'Жодних карт не знайдено відповідності критеріям'},
+            500: {'description': 'Внутрішня помилка сервера'}
         }
     )
     def list(self, request):
@@ -97,7 +106,9 @@ class DogCardView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateM
         photo = request.FILES.get('photo')
         if photo:
             if dog_card.photo:
-                dog_card.photo.delete()  # assuming this deletes the file too
+                dog_card.photo.delete()
+                # assuming this deletes the file too
+                delete_file_from_backblaze(dog_card.photo)
             image_validation(photo)
             webp_image_name, webp_image_id, bucket_name, _ = converter_to_webP(
                 photo)
@@ -110,7 +121,17 @@ class DogCardView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateM
     @extend_schema(
         summary='List all dog cards',
         description="List all dog cards",
-        responses={200: DogCardSerializer(many=True)}
+        responses={200: DogCardSerializer(many=True)},
+        parameters=[
+            OpenApiParameter(
+                name="Accept-Language",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.HEADER,
+                required=False,
+                description="Language code to get the content in a specific language (e.g., en, uk)",
+                enum=["en", "uk"],
+            ),]
+
     )
     def list(self, request):
         cards = DogCardModel.objects.all()
@@ -121,22 +142,26 @@ class DogCardView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateM
         summary='Create a new dog card',
         description="Create a new dog card",
         request=DogCardSerializer,
-        responses={201: DogCardSerializer, 500: 'Internal Server Error'}
+        responses={201: DogCardSerializer, 400: 'Bad Request'}
     )
     def create(self, request):
         try:
             data_fields = ['name', 'ready_for_adoption', 'gender', 'age', 'sterilization',
                            'vaccination_parasite_treatment', 'size', 'description']
+
             data = {field: request.data.get(field) for field in data_fields}
             temp_dog_card = DogCardModel()
             data['photo'] = self.handle_photo(request, temp_dog_card)
 
+            # serialized_data = DogCardSerializer(data=data)
+            # serialized_data.is_valid(raise_exception=True)
+
             dog_card = DogCardModel.objects.create(**data)
-            dog_card_serializer = DogCardSerializer(dog_card)
+            dog_card_serializer = DogCardSerializer(instance=dog_card)
 
             return Response({'message': 'Карта створена', 'new_dogs_card': dog_card_serializer.data}, status=status.HTTP_201_CREATED)
         except ValidationError as e:
-            return Response({'message': f'Помилка {e}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({'message': f'Помилка {e}'}, status=status.HTTP_400_BAD_REQUEST)
 
     @extend_schema(
         summary='Update an existing dog card',
@@ -173,8 +198,7 @@ class DogCardView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateM
     def destroy(self, request, pk):
         try:
             card = DogCardModel.objects.get(id=pk)
-            file = FileModel.objects.get(id=card.photo.id)
-            file.delete()
+            delete_file_from_backblaze(card.photo_id)
             card.delete()
             return Response({'message': 'Карта видалена'}, status=status.HTTP_200_OK)
         except DogCardModel.DoesNotExist:

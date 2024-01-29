@@ -1,7 +1,9 @@
+from django.http import Http404
+from django.shortcuts import get_object_or_404
 from rest_framework.response import Response
 from rest_framework import status
 from main_page.models import NewsModel as News, Partners
-from backblaze.utils.b2_utils import converter_to_webP
+from backblaze.utils.b2_utils import converter_to_webP, delete_file_from_backblaze
 from backblaze.utils.validation import image_validation
 from rest_framework.permissions import IsAuthenticated
 from backblaze.models import FileModel
@@ -14,14 +16,39 @@ from rest_framework import mixins
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from api.models import IsApprovedUser
+from django.utils.translation import gettext as _
+import logging
 
-# Create your views here.
+logger = logging.getLogger(__name__)
+# Main Page -------------------------------------------------------------------
 
 
 class main_page_view(mixins.ListModelMixin, GenericViewSet):
+    """
+    This class represents a view for the main page. It is a subclass of the `mixins.ListModelMixin` and `GenericViewSet` classes.
+
+    Attributes:
+        permission_classes (list): A list of permission classes that determine the access permissions for this view. In this case, it allows any user to access the view.
+        serializer_mapping (dict): A dictionary that maps model classes to their corresponding serializer classes.
+
+    Methods:
+        list(request): This method is called when a GET request is made to the view. It retrieves the necessary data from the database, serializes it using the appropriate serializers, and returns the serialized data as a response.
+
+            Parameters:
+                request (Request): The HTTP request object.
+
+            Returns:
+                Response: The HTTP response object containing the serialized data.
+
+            Raises:
+                Http404: If no data is found, a 404 Not Found response is raised.
+    """
     permission_classes = [AllowAny]
-    queryset = News.objects.all()
-    serializer_class = NewsSerializer
+    serializer_mapping = {
+        News: NewsSerializer,
+        Partners: PartnerSerializer,
+        DogCardModel: DogCardSerializer
+    }
 
     @extend_schema(
         parameters=[
@@ -36,35 +63,75 @@ class main_page_view(mixins.ListModelMixin, GenericViewSet):
         ]
     )
     def list(self, request):
-        try:
-            news_queryset = News.objects.all()[:4]
-            dog_cards_queryset = DogCardModel.objects.all()
-            partners_queryset = Partners.objects.all()
+        """
+        This method is called when a GET request is made to the view. It retrieves the necessary data from the database, serializes it using the appropriate serializers, and returns the serialized data as a response.
 
-            news_serializer = NewsSerializer(news_queryset, many=True)
-            dog_cards_serializer = DogCardSerializer(
-                dog_cards_queryset, many=True)
-            partners_serializer = PartnerSerializer(
-                partners_queryset, many=True)
+        Parameters:
+            request (Request): The HTTP request object.
 
-            # Serialize news and dog cards
-            response_data = {
-                'news': news_serializer.data,
-                'partners': partners_serializer.data,
-                'dog_cards': dog_cards_serializer.data
-            }
-            # cache.set('main_page_data', response_data)
-            return Response(response_data, status=status.HTTP_200_OK)
-        except Exception as e:
-            return Response({'message': f'Помилка {e}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        Returns:
+            Response: The HTTP response object containing the serialized data.
 
-# News
+        Raises:
+            Http404: If no data is found, a 404 Not Found response is raised.
+        """
+        news_queryset = News.objects.all()[:4]
+        dog_cards_queryset = DogCardModel.objects.all()
+        partners_queryset = Partners.objects.all()
+
+        # Serialize news and dog cards
+        news_serializer = self.serializer_mapping[News](
+            news_queryset, many=True)
+        dog_cards_serializer = self.serializer_mapping[DogCardModel](
+            dog_cards_queryset, many=True)
+        partners_serializer = self.serializer_mapping[Partners](
+            partners_queryset, many=True)
+
+        # Make response data
+        response_data = {
+            'news': news_serializer.data,
+            'partners': partners_serializer.data,
+            'dog_cards': dog_cards_serializer.data
+        }
+        if not response_data['news'] and not response_data['dog_cards'] and not response_data['partners']:
+            raise Http404("No data found")
+        return Response(response_data, status=status.HTTP_200_OK)
+
+# News------------------------------------------------------------------
 
 
 class NewsView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.DestroyModelMixin, GenericViewSet):
     permission_classes = [IsAuthenticated, IsApprovedUser]
     queryset = News.objects.all()
     serializer_class = NewsSerializer
+
+    def upload_photo(self, *, photo):
+        """
+        This method uploads a photo to the backblaze
+        """
+        if photo:
+            image_validation(photo)
+            webp_image_name, webp_image_id, bucket_name, _ = converter_to_webP(
+                photo)
+            image_url = f'https://{bucket_name}.s3.us-east-005.backblazeb2.com/{webp_image_name}'
+            new_file = FileModel.objects.create(
+                id=webp_image_id, name=webp_image_name, url=image_url, category='image')
+        return new_file
+
+    def update_photo(self, *, photo, cur_news):
+        """
+        This method updates a photo to the backblaze
+        """
+        if photo:
+            delete_file_from_backblaze(cur_news.photo_id)
+            cur_news.photo.delete()
+            image_validation(photo)
+            webp_image_name, webp_image_id, bucket_name, _ = converter_to_webP(
+                photo)
+            image_url = f'https://{bucket_name}.s3.us-east-005.backblazeb2.com/{webp_image_name}'
+            new_file = FileModel.objects.create(
+                id=webp_image_id, name=webp_image_name, url=image_url, category='image')
+        return new_file
 
     @extend_schema(
         summary='List News Items',
@@ -75,10 +142,10 @@ class NewsView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateMode
         }
     )
     def list(self, request):
-        queryset = super().get_queryset()
-        serializer = NewsSerializer(queryset, many=True)
-        if not queryset:
-            return Response({'message': 'News not found'}, status=status.HTTP_404_NOT_FOUND)
+        queryset = self.get_queryset()
+        if not queryset.exists():
+            return Response({'message': 'Новини не знайдено'}, status=status.HTTP_404_NOT_FOUND)
+        serializer = self.get_serializer(queryset, many=True)
         return Response({"news": serializer.data})
 
     # Create news
@@ -92,26 +159,20 @@ class NewsView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateMode
         }
     )
     def create(self, request, *args, **kwargs):
-        title = request.data['title']
-        sub_text = request.data['sub_text']
-        url = request.data['url']
-        photo = request.FILES['photo']
+        title = request.data.get('title')
+        sub_text = request.data.get('sub_text')
+        url = request.data.get('url')
+        photo = request.FILES.get('photo')
 
-        if photo:
-            image_validation(photo)
-            webp_image_name, webp_image_id, bucket_name, _ = converter_to_webP(
-                photo)
-            image_url = f'https://{bucket_name}.s3.us-east-005.backblazeb2.com/{webp_image_name}'
-            new_file = FileModel.objects.create(
-                id=webp_image_id, name=webp_image_name, url=image_url, category='image')
+        new_file = self.upload_photo(photo=photo)
         new_news = News.objects.create(
             title=title, sub_text=sub_text, url=url, photo=new_file)
         news_serializer = NewsSerializer(new_news)
 
-        if News.objects.count > 5:
+        if News.objects.count() > 5:
             old_news = News.objects.last()
-            file = FileModel.objects.get(id=old_news.photo.id)
-            file.delete()
+            delete_file_from_backblaze(old_news.photo_id)
+            old_news.photo.delete()
             old_news.delete()
 
         return Response({'massage': 'news was created', 'news': news_serializer.data
@@ -128,28 +189,25 @@ class NewsView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateMode
         }
     )
     def update(self, request, pk):
-        title = request.data['title']
-        sub_text = request.data['sub_text']
-        url = request.data['url']
-        photo = request.FILES['photo']
+        """
+        Updates a news item identified by the primary key (pk).
+        """
+        title = request.data.get('title')
+        sub_text = request.data.get('sub_text')
+        url = request.data.get('url')
+        photo = request.FILES.get('photo')
         try:
             news = News.objects.get(pk=pk)
-            if photo:
-                news.photo.delete()
-                image_validation(photo)
-                webp_image_name, webp_image_id, bucket_name, _ = converter_to_webP(
-                    photo)
-                image_url = f'https://{bucket_name}.s3.us-east-005.backblazeb2.com/{webp_image_name}'
-                new_file = FileModel.objects.create(
-                    id=webp_image_id, name=webp_image_name, url=image_url, category='image')
+            new_file = self.update_photo(photo=photo, cur_news=news)
+            if new_file:
                 news.photo = new_file
             news.title = title
             news.sub_text = sub_text
             news.url = url
             news.save()
-            return Response({'message': 'News was updated'}, status=status.HTTP_200_OK)
+            return Response({'message': 'Новини були оновлені'}, status=status.HTTP_200_OK)
         except News.DoesNotExist:
-            return Response({'message': 'News not found'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'message': 'Новини не знайдено'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({'message': f'Помилка {e}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -157,29 +215,48 @@ class NewsView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateMode
         summary='Delete a News Item',
         description='Deletes the news item with the specified ID.',
         responses={
-            200: {'description': 'Новини були видалені'},
-            404: {'description': 'Новини не знайдено'},
-            500: {'description': 'Внутрішня помилка сервера'}
+            status.HTTP_200_OK: {'description': 'Новини успішно видалили'},
+            status.HTTP_404_NOT_FOUND: {'description': 'Новини не знайдено'},
+            status.HTTP_500_INTERNAL_SERVER_ERROR: {
+                'description': 'Внутрішня помилка сервера'}
         }
     )
     def destroy(self, request, pk):
+        """
+        Deletes a news item identified by the primary key (pk).
+        """
         try:
-            news = News.objects.get(pk=pk)
-            file = FileModel.objects.get(pk=news.photo.id)
-            file.delete()
-            news.delete()
+            news_item = News.objects.get(pk=pk)
+            delete_file_from_backblaze(news_item.photo_id)
+            news_item.photo.delete()
+            news_item.delete()
+
             return Response({'message': 'Новини були видалені'}, status=status.HTTP_200_OK)
-        except not news:
+
+        except News.DoesNotExist:
             return Response({'message': 'Новини не знайдено'}, status=status.HTTP_404_NOT_FOUND)
+
         except Exception as e:
-            return Response({'message': f'Помилка {e}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.error(f'Помилка видалення новин: {e}', exc_info=True)
+            return Response({'message': 'Внутрішня помилка сервера'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+# Partners-----------------------------------------------------------
 
 
-# Partners
 class PartnersView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.DestroyModelMixin, GenericViewSet):
     queryset = Partners.objects.all()
     permission_classes = [IsAuthenticated, IsApprovedUser]
     serializer_class = PartnerSerializer
+
+    def upload_logo(self, *, logo):
+        if logo:
+            image_validation(logo)
+            webp_image_name, webp_image_id, bucket_name, _ = converter_to_webP(
+                logo)
+            image_url = f'https://{bucket_name}.s3.us-east-005.backblazeb2.com/{webp_image_name}'
+            new_file = FileModel.objects.create(
+                id=webp_image_id, name=webp_image_name, url=image_url, category='image')
+        return new_file
 
     @extend_schema(
         summary='List all partners',
@@ -213,13 +290,8 @@ class PartnersView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.Destro
         logo = request.FILES.get('logo')
         data = {}
         try:
-            if logo:
-                image_validation(logo)
-                webp_image_name, webp_image_id, bucket_name, _ = converter_to_webP(
-                    logo)
-                image_url = f'https://{bucket_name}.s3.us-east-005.backblazeb2.com/{webp_image_name}'
-                new_file = FileModel.objects.create(
-                    id=webp_image_id, name=webp_image_name, url=image_url, category='image')
+            new_file = self.upload_logo(logo=logo)
+            if new_file:
                 data['name'] = new_file.name
                 data['logo'] = new_file
             new_partner = Partners.objects.create(**data)
@@ -240,8 +312,8 @@ class PartnersView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.Destro
     def destroy(self, request, pk):
         try:
             partner = Partners.objects.get(pk=pk)
-            file = FileModel.objects.get(id=partner.logo.id)
-            file.delete()
+            delete_file_from_backblaze(partner.logo_id)
+            partner.logo.delete()
             partner.delete()
             return Response({'message': 'Партнер був видалений'}, status=status.HTTP_200_OK)
         except Partners.DoesNotExist:

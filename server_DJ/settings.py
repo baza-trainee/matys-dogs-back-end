@@ -166,17 +166,17 @@ SIMPLE_JWT = {
 # https://docs.djangoproject.com/en/5.0/topics/i18n/
 
 
-# LANGUAGE_CODE = 'en-us'
-
 def gettext(s): return s
 
+
+MODELTRANSLATION_DEFAULT_LANGUAGE = 'uk'
 
 LANGUAGES = (
     ('uk', gettext('Ukrainian')),
     ('en', gettext('English')),
 )
-
 LANGUAGE_CODE = "uk"
+
 
 TIME_ZONE = 'UTC'
 
