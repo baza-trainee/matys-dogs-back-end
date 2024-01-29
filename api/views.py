@@ -15,6 +15,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.decorators import action
 from drf_spectacular.utils import extend_schema
 from django.contrib.auth.hashers import make_password
+from drf_spectacular.utils import OpenApiResponse
 import json
 import os
 import re
@@ -59,8 +60,65 @@ class AuthenticationService(ViewSet):
         return User.objects.none()
 
     @extend_schema(
-        description="Register a new user",
-        responses={201: None, 400: 'Registration error'}
+        summary='Register user',
+        request={
+            'application/json': {
+                'type': 'object',
+                'properties': {
+                    'email': {
+                        'type': 'string',
+                        'format': 'email',
+                        'description': 'User email'
+                    },
+                    'password': {
+                        'type': 'string',
+                        'description': 'User password'
+                    },
+                    'confirmPassword': {
+                        'type': 'string',
+                        'description': 'Confirmation of user password'
+                    },
+                    'first_name': {
+                        'type': 'string',
+                        'description': 'User first name'
+                    },
+                    'last_name': {
+                        'type': 'string',
+                        'description': 'User last name'
+                    }
+                },
+                'required': ['email', 'password', 'confirmPassword', 'first_name', 'last_name']
+            }
+        },
+        responses={
+            201: OpenApiResponse(
+                description='User registration successful',
+                response={
+                    'type': 'object',
+                    'properties': {
+                        'message': {
+                            'type': 'string',
+                            'example': 'Користувач зареєстрований'
+                        },
+                        'email': {
+                            'type': 'string',
+                            'example': 'user@example.com'
+                        }
+                    }
+                }
+            ),
+            400: OpenApiResponse(
+                description='Invalid request or user already exists',
+                response={
+                    'type': 'object',
+                    'properties': {
+                        'error': {
+                            'type': 'string'
+                        }
+                    }
+                }
+            )
+        }
     )
     @action(detail=False, methods=['POST'], url_path='register')
     def register(self, request):
@@ -86,8 +144,53 @@ class AuthenticationService(ViewSet):
         return Response({'message': 'Користувач зареєстрований', 'email': data['email']}, status=status.HTTP_201_CREATED)
 
     @extend_schema(
-        description="Log in a user",
-        responses={200: None, 400: 'Invalid email or password'}
+        summary='Login user',
+        request={
+            'application/json': {
+                'type': 'object',
+                'properties': {
+                    'email': {
+                        'type': 'string',
+                        'format': 'email',
+                        'description': 'User email'
+                    },
+                    'password': {
+                        'type': 'string',
+                        'description': 'User password'
+                    }
+                },
+                'required': ['email', 'password']
+            }
+        },
+        responses={
+            200: OpenApiResponse(
+                description='User login successful',
+                response={
+                    'type': 'object',
+                    'properties': {
+                        'message': {
+                            'type': 'string',
+                            'example': 'Користувач увійшов в систему'
+                        },
+                        'access_token': {
+                            'type': 'string',
+                            'example': 'access_token_example'
+                        }
+                    }
+                }
+            ),
+            400: OpenApiResponse(
+                description='Invalid login credentials',
+                response={
+                    'type': 'object',
+                    'properties': {
+                        'error': {
+                            'type': 'string'
+                        }
+                    }
+                }
+            )
+        }
     )
     @action(detail=False, methods=['POST'], url_path='login')
     def login(self, request):
@@ -113,8 +216,65 @@ class AuthenticationService(ViewSet):
         return Response({'message': 'Користувач увійшов в систему', 'access_token': accsess}, status=status.HTTP_200_OK)
 
     @extend_schema(
-        description="Reset password",
-        responses={200: None, 400: 'Invalid token or request'}
+        summary='Reset password',
+        parameters=[
+            {
+                'name': 'uidb64',
+                'in': 'path',
+                'description': 'Base64 encoded user ID',
+                'required': True,
+                'schema': {'type': 'string'}
+            },
+            {
+                'name': 'token',
+                'in': 'path',
+                'description': 'Password reset token',
+                'required': True,
+                'schema': {'type': 'string'}
+            }
+        ],
+        request={
+            'application/json': {
+                'type': 'object',
+                'properties': {
+                    'password': {
+                        'type': 'string',
+                        'description': 'New password'
+                    },
+                    'confirmPassword': {
+                        'type': 'string',
+                        'description': 'Confirm new password'
+                    }
+                },
+                'required': ['password', 'confirmPassword']
+            }
+        },
+        responses={
+            200: OpenApiResponse(
+                description='Password reset successful',
+                response={
+                    'type': 'object',
+                    'properties': {
+                        'message': {
+                            'type': 'string',
+                            'example': 'Скидання пароля Успішні'
+                        }
+                    }
+                }
+            ),
+            400: OpenApiResponse(
+                description='Invalid request or token',
+                response={
+                    'type': 'object',
+                    'properties': {
+                        'error': {
+                            'type': 'string',
+                            'example': 'Неприпустимий токен'
+                        }
+                    }
+                }
+            )
+        }
     )
     @action(detail=False, methods=['POST'], url_path='reset-password/<uidb64>/<token>')
     def reset_password(self, request, uidb64, token):
@@ -137,8 +297,46 @@ class AuthenticationService(ViewSet):
             return Response({'error': f'Невірний запит {e}'}, status=status.HTTP_400_BAD_REQUEST)
 
     @extend_schema(
-        description="Forgot password",
-        responses={200: None, 400: 'Email does not exist'}
+        summary='Forgot password',
+        request={
+            'application/json': {
+                'type': 'object',
+                'properties': {
+                    'email': {
+                        'type': 'string',
+                        'format': 'email',
+                        'description': 'User email for password reset request'
+                    }
+                },
+                'required': ['email']
+            }
+        },
+        responses={
+            200: OpenApiResponse(
+                description='Password reset email sent successfully',
+                response={
+                    'type': 'object',
+                    'properties': {
+                        'message': {
+                            'type': 'string',
+                            'example': 'Електронна пошта була успішно надіслана'
+                        }
+                    }
+                }
+            ),
+            400: OpenApiResponse(
+                description='Invalid request',
+                response={
+                    'type': 'object',
+                    'properties': {
+                        'error': {
+                            'type': 'string',
+                            'example': 'Електронна пошта не існує'
+                        }
+                    }
+                }
+            )
+        }
     )
     @action(detail=False, methods=['POST'], url_path='forgot-password')
     def forgot_password(self, request):

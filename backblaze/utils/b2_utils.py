@@ -7,8 +7,6 @@ from rest_framework.exceptions import ValidationError
 
 
 # Initialize B2 API
-
-
 def initialize_b2api():
     required_env_varibles = ['APPLICATION_KEY_ID', 'APPLICATION_KEY',
                              'BUCKET_NAME_IMG']
@@ -30,9 +28,8 @@ def initialize_b2api():
 
 
 # Convert to webp
-
-
 def converter_to_webP(file_obj):
+    
     try:
         bucket, bucket_name = initialize_b2api()
 
@@ -57,9 +54,8 @@ def converter_to_webP(file_obj):
 
         webp_image_name = file_info.file_name
         webp_image_id = file_info.id_
-        size = file_info.size
 
-        return webp_image_name, webp_image_id, bucket_name, size
+        return webp_image_name, webp_image_id, bucket_name
     except Exception as e:
         raise ValidationError(detail={f"Error converting to webp: {e}"})
 
@@ -67,7 +63,7 @@ def converter_to_webP(file_obj):
 # Compress image
 def compress_image(image, quality=80, lossy_quality=50, step_quality=4, step_lossy_quality=5, refactor_size=0.5, target_size=250000, min_dimension=100):
     if not isinstance(image, Image.Image):
-        raise ValidationError(detail={'error': 'Invalid image object'})
+        raise ValidationError(detail={'error': 'Недійсний об’єкт зображення'})
     byte_arr = BytesIO()
     current_image = image
     while quality >= 10 and (current_image.width > min_dimension or current_image.height > min_dimension):
@@ -78,7 +74,6 @@ def compress_image(image, quality=80, lossy_quality=50, step_quality=4, step_los
 
         if byte_arr.tell() <= target_size:
             break
-        print(f'current size: {byte_arr.tell()}')
         if byte_arr.tell() > target_size and (current_image.width > min_dimension or current_image.height > min_dimension):
             new_width = int(image.width * refactor_size)
             new_height = int(image.height * refactor_size)
