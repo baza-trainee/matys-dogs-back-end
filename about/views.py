@@ -18,6 +18,8 @@ import json
 
 class AboutList(mixins.ListModelMixin, GenericViewSet):
     permission_classes = [AllowAny]
+    queryset = AboutModel.objects.all()
+    serializer_class = AboutSerializer
 
     @extend_schema(
         summary='Retrieve about data',
@@ -27,13 +29,10 @@ class AboutList(mixins.ListModelMixin, GenericViewSet):
             404: {'description': 'About data not found'}
         }
     )
-    def get(self, request):
-        try:
-            about_data = AboutModel.objects.all()
-            serializer = AboutSerializer(about_data, many=True)
-            return Response({'about_data': serializer.data}, status=status.HTTP_200_OK)
-        except AboutModel.DoesNotExist:
-            return Response({'message': 'About data not found'})
+    def list(self, request):
+        about_data = self.get_queryset()
+        serializer = self.get_serializer(about_data, many=True)
+        return Response({'about_data': serializer.data}, status=status.HTTP_200_OK)
 
 
 # About Images
