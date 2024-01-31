@@ -169,12 +169,13 @@ SIMPLE_JWT = {
 def gettext(s): return s
 
 
-MODELTRANSLATION_DEFAULT_LANGUAGE = 'uk'
 
 LANGUAGES = (
     ('uk', gettext('Ukrainian')),
     ('en', gettext('English')),
 )
+
+MODELTRANSLATION_DEFAULT_LANGUAGE = 'uk'
 LANGUAGE_CODE = "uk"
 
 

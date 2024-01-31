@@ -14,17 +14,95 @@ from backblaze.utils.validation import image_validation
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from api.models import IsApprovedUser
+
 # Create your views here.
 
 
 class DogCardSearch(mixins.ListModelMixin, GenericViewSet):
     permission_classes = [AllowAny]
 
+    def age_years(self, *, lower_bound, upper_bound):
+        possible_ages = []
+        lower_bound_years = max(1, lower_bound / 12)
+        upper_bound_years = upper_bound / 12
+        age_years = lower_bound_years
+        while age_years <= upper_bound_years:
+            if age_years <= 3:
+                if age_years == 1:
+                    year_str = "рік"
+                elif 1 < age_years <= 4 or (age_years % 1 == 0.5 and age_years < 5):
+                    year_str = "роки"
+
+                if age_years % 1 == 0:
+                    year_num = f'{int(age_years)}'
+                else:
+                    year_num = f"{age_years:.1f}".replace(".", ",")
+                possible_ages.append(
+                    f'{year_num} {year_str}')
+                age_years += 0.5
+            elif age_years > 3:
+                if age_years < 5:
+                    year_str = "роки"
+                else:
+                    year_str = "років"
+                if age_years % 1 == 0:
+                    year_num = f'{int(age_years)}'
+                else:
+                    year_num = f"{age_years:.1f}".replace(
+                        ".", ",")
+                possible_ages.append(
+                    f'{year_num} {year_str}')
+                age_years += 0.5
+        return possible_ages
+
+    def age_in_months(self, *,  lower_bound, upper_bound):
+        """
+        Generates a list of age strings in months and years between the specified bounds.
+
+        Args:
+        lower_bound (float): The lower bound of age in months.
+        upper_bound (float): The upper bound of age in months.
+
+        Returns:
+        list: A list of age strings in months and years.
+        """
+        possible_ages = []
+
+        age_months = lower_bound
+        while age_months <= upper_bound:
+            if age_months <= 12:
+                if age_months in [1, 2, 3, 4]:
+                    month_str = "місяць" if age_months == 1 else 'місяці'
+                else:
+                    month_str = "місяців"
+                age_str = f"{age_months:.1f}" if age_months % 1 else f"{int(age_months)}"
+                possible_ages.append(f'{age_str} {month_str}')
+                if age_months == 12:
+                    possible_ages.append(f'1 рік')
+                age_months += 0.5
+
+        return possible_ages
+
+    def get_age_range(self, *, age_category):
+        age_ranges = {
+            'щеня': (0, 12),
+            'puppy': (0, 12),
+            'молодий': (12, 36),
+            'young': (12, 36),
+            'дорослий': (42, 240),
+            'adult': (42, 240),
+        }
+        lower_bound, upper_bound = age_ranges.get(age_category, (0, 0))
+        if lower_bound < 12:
+            return self.age_in_months(lower_bound=lower_bound, upper_bound=upper_bound)
+        elif lower_bound >= 12:
+            return self.age_years(lower_bound=lower_bound, upper_bound=upper_bound)
+
     def search_dogs_cards(self, *, age, size, gender, ready_for_adoption):
         query = Q()
         if age:
-            normilized_age = self.normalize_age(age)
-            query &= Q(age__icontains=normilized_age)
+            age_range = self.get_age_range(age_category=age)
+            query &= Q(age_uk__in=age_range)
         if size:
             query &= Q(size__icontains=size)
         if gender:
@@ -36,14 +114,6 @@ class DogCardSearch(mixins.ListModelMixin, GenericViewSet):
 
         searched_cards = DogCardModel.objects.filter(query)
         return searched_cards
-
-    def normalize_age(self, age):
-        # Replace common age-related terms to their Ukrainian equivalents
-        # assuming 'years' and 'months' are provided in English by the users
-        age = age.lower().replace('years', 'років').replace(
-            'year', 'рік').replace('months', 'місяців').replace('month', 'місяць')
-        age = ' '.join(age.split())
-        return age
 
     @extend_schema(
         summary='Search dog cards',
@@ -59,17 +129,52 @@ class DogCardSearch(mixins.ListModelMixin, GenericViewSet):
                 enum=["en", "uk"],
             ),
             OpenApiParameter(
-                name='age', description='Search by dog age', required=False, type=str),
+                name='age',
+                description='Search by dog age',
+                required=False,
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                enum=[
+                    'щеня',
+                    'молодий',
+                    'дорослий',
+                    'puppy',
+                    'young',
+                    'adult']),
             OpenApiParameter(
-                name='size', description='Search by dog size', required=False, type=str),
+                name='size',
+                description='Search by dog size',
+                required=False,
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                enum=[
+                    'small',
+                    'medium',
+                    'large',
+                    'маленький',
+                    'середній',
+                    'великий'
+                ]
+            ),
             OpenApiParameter(
-                name='gender', description='Search by dog gender', required=False, type=str),
+                name='gender',
+                description='Search by dog gender',
+                required=False,
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                enum=[
+                    'male',
+                    'female',
+                    'хлопчик',
+                    'дівчинка'
+                ]
+            ),
             OpenApiParameter(name='ready_for_adoption',
                              description='Search by dogs ready for adoption', required=False, type=bool),
         ],
         responses={
             200: DogCardSerializer(many=True),
-            404: {'description': 'Жодних карт не знайдено відповідності критеріям'},
+            400: {'description': 'Жодних карт не знайдено відповідності критеріям'},
             500: {'description': 'Внутрішня помилка сервера'}
         }
     )
@@ -87,7 +192,7 @@ class DogCardSearch(mixins.ListModelMixin, GenericViewSet):
                 serializers = DogCardSerializer(searched_dogs_cards, many=True)
                 return Response({'Cards': serializers.data})
             else:
-                return Response({'message': 'Карт не знайдено'}, status=status.HTTP_404_NOT_FOUND)
+                return Response({'message': 'Карт не знайдено'}, status=status.HTTP_400_BAD_REQUEST)
         except ValidationError as e:
             return Response({'message': f'Помилка {e}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

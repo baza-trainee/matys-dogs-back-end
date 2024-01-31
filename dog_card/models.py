@@ -14,7 +14,7 @@ class DogCardModel(models.Model):
     sterilization = models.BooleanField(default=False)
     vaccination_parasite_treatment = models.BooleanField(default=False)
     size = models.CharField(max_length=10, choices=[(
-        "Маленька", "Маленькая"), ("Средняя", "Средняя"), ("Велика", "Велика")])
+        "маленький", "маленький"), ("середній", "середній"), ("великий", "великий")])
     description = models.TextField()
     photo = models.ForeignKey(FileModel, on_delete=models.CASCADE, limit_choices_to=models.Q(
         category='image'), null=True, blank=True)
