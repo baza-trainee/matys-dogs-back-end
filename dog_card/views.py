@@ -2,7 +2,7 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny
 from dog_card.models import DogCardModel
 from rest_framework.response import Response
-from dog_card.serializer import DogCardSerializer
+from dog_card.serializer import DogCardSerializer, DogCardCreateSerializer
 from django.db.models import Q
 from rest_framework.exceptions import ValidationError
 from rest_framework import mixins
@@ -87,10 +87,10 @@ class DogCardSearch(mixins.ListModelMixin, GenericViewSet):
         age_ranges = {
             'щеня': (0, 12),
             'puppy': (0, 12),
-            'молодий': (12, 36),
-            'young': (12, 36),
-            'дорослий': (42, 240),
-            'adult': (42, 240),
+            'молода собака': (12, 36),
+            'young dog': (12, 36),
+            'доросла собака': (42, 240),
+            'adult dog': (42, 240),
         }
         lower_bound, upper_bound = age_ranges.get(age_category, (0, 0))
         if lower_bound < 12:
@@ -136,11 +136,12 @@ class DogCardSearch(mixins.ListModelMixin, GenericViewSet):
                 location=OpenApiParameter.QUERY,
                 enum=[
                     'щеня',
-                    'молодий',
-                    'дорослий',
+                    'молода собака',
+                    'доросла собака',
                     'puppy',
-                    'young',
-                    'adult']),
+                    'young dog',
+                    'adult dog'
+                ]),
             OpenApiParameter(
                 name='size',
                 description='Search by dog size',
@@ -163,8 +164,8 @@ class DogCardSearch(mixins.ListModelMixin, GenericViewSet):
                 type=OpenApiTypes.STR,
                 location=OpenApiParameter.QUERY,
                 enum=[
-                    'male',
-                    'female',
+                    'boy',
+                    'girl',
                     'хлопчик',
                     'дівчинка'
                 ]
@@ -246,7 +247,7 @@ class DogCardView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateM
     @extend_schema(
         summary='Create a new dog card',
         description="Create a new dog card",
-        request=DogCardSerializer,
+        request=DogCardCreateSerializer,
         responses={201: DogCardSerializer, 400: 'Bad Request'}
     )
     def create(self, request):
@@ -255,14 +256,14 @@ class DogCardView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateM
                            'vaccination_parasite_treatment', 'size', 'description']
 
             data = {field: request.data.get(field) for field in data_fields}
-            temp_dog_card = DogCardModel()
+            temp_dog_card = DogCardCreateSerializer()
             data['photo'] = self.handle_photo(request, temp_dog_card)
 
             # serialized_data = DogCardSerializer(data=data)
             # serialized_data.is_valid(raise_exception=True)
 
             dog_card = DogCardModel.objects.create(**data)
-            dog_card_serializer = DogCardSerializer(instance=dog_card)
+            dog_card_serializer = DogCardCreateSerializer(instance=dog_card)
 
             return Response({'message': 'Карта створена', 'new_dogs_card': dog_card_serializer.data}, status=status.HTTP_201_CREATED)
         except ValidationError as e:
