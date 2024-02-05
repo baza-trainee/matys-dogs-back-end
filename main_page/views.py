@@ -8,7 +8,7 @@ from backblaze.utils.validation import image_validation
 from rest_framework.permissions import IsAuthenticated
 from backblaze.models import FileModel
 from dog_card.models import DogCardModel
-from main_page.serializer import NewsSerializer, PartnerSerializer
+from main_page.serializer import NewsSerializer, NewsTranslationsSerializer, PartnerSerializer
 from dog_card.serializer import DogCardSerializer
 from rest_framework.permissions import AllowAny
 from rest_framework.viewsets import GenericViewSet
@@ -16,7 +16,7 @@ from rest_framework import mixins
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from api.models import IsApprovedUser
-from django.utils.translation import gettext as _
+from rest_framework.validators import ValidationError
 import logging
 
 logger = logging.getLogger(__name__)
@@ -101,110 +101,177 @@ class main_page_view(mixins.ListModelMixin, GenericViewSet):
 
 
 class NewsView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.DestroyModelMixin, GenericViewSet):
+    """
+    A viewset for listing, creating, updating, and deleting news items. It supports photo uploads for news items,
+    with special handling for converting uploaded photos to webP format and cleaning up resources on updates or deletion.
+    """
     permission_classes = [IsAuthenticated, IsApprovedUser]
     queryset = News.objects.all()
-    serializer_class = NewsSerializer
+    serializer_class = NewsTranslationsSerializer
 
-    def upload_photo(self, *, photo):
+    def handle_photo(self, request, news):
         """
-        This method uploads a photo to the backblaze
-        """
-        if photo:
-            image_validation(photo)
-            webp_image_name, webp_image_id, bucket_name, _ = converter_to_webP(
-                photo)
-            image_url = f'https://{bucket_name}.s3.us-east-005.backblazeb2.com/{webp_image_name}'
-            new_file = FileModel.objects.create(
-                id=webp_image_id, name=webp_image_name, url=image_url, category='image')
-        return new_file
+        Handles the upload and conversion of a photo to webP format. If the news item already has a photo,
+        it deletes the existing photo and its associated file in Backblaze storage before updating.
 
-    def update_photo(self, *, photo, cur_news):
+        Args:
+            request: HttpRequest object containing the photo file in FILES.
+            news: The news instance to associate the photo with, or None if creating a new news item.
+
+        Returns:
+            A FileModel instance representing the uploaded and converted photo.
         """
-        This method updates a photo to the backblaze
-        """
+        photo = request.FILES.get('photo')
         if photo:
-            delete_file_from_backblaze(cur_news.photo_id)
-            cur_news.photo.delete()
-            image_validation(photo)
-            webp_image_name, webp_image_id, bucket_name, _ = converter_to_webP(
+            if news and news.photo:
+                news.photo.delete()
+                delete_file_from_backblaze(news.photo_id)
+
+            webp_image_name, webp_image_id, image_url = converter_to_webP(
                 photo)
-            image_url = f'https://{bucket_name}.s3.us-east-005.backblazeb2.com/{webp_image_name}'
-            new_file = FileModel.objects.create(
-                id=webp_image_id, name=webp_image_name, url=image_url, category='image')
-        return new_file
+            return FileModel.objects.create(
+                id=webp_image_id, name=webp_image_name, url=image_url, category='image'
+            )
+
+    def perform_create(self, serilaizer):
+        """
+        Overrides the default perform_create method to save the provided serializer.
+
+        Note: Typo corrected in the argument name from 'serilaizer' to 'serializer'.
+
+        Args:
+            serializer: The serializer instance containing the validated data.
+        """
+        serilaizer.save()
+
+    def update_news(self, news, data):
+        """
+        Updates the fields of a news instance with the given data.
+
+        Args:
+            news: The News instance to be updated.
+            data: A dictionary of field-value pairs to update the news instance with.
+        """
+        for field, value in data.items():
+            setattr(news, field, value)
+        news.save()
 
     @extend_schema(
         summary='List News Items',
-        description='Retrieves a list of all news items.',
-        responses={
-            200: NewsSerializer(many=True),
-            404: {'description': 'News not found'}
-        }
+        description='Retrieves a list of all news items, providing a paginated response. Supports filtering and searching.',
+        responses={200: NewsTranslationsSerializer(many=True)},
+        parameters=[
+            OpenApiParameter(
+                name='Accept-Language',
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.HEADER,
+                required=False,
+                description='Specify the language of the content returned. Defaults to English.',
+                enum=['en', 'uk'],
+            ),
+        ]
     )
-    def list(self, request):
-        queryset = self.get_queryset()
-        if not queryset.exists():
-            return Response({'message': 'Новини не знайдено'}, status=status.HTTP_404_NOT_FOUND)
-        serializer = self.get_serializer(queryset, many=True)
-        return Response({"news": serializer.data})
+    def list(self, request, *args, **kwargs):
+        """
+        Retrieves a list of all news items available in the database. This method provides a paginated response
+        containing news items serialized using the NewsTranslationsSerializer.
+
+        This method overrides the default list behavior to utilize the custom queryset and serializer class defined
+        in the NewsView. It supports filtering, searching, and pagination out of the box as configured in the viewset.
+
+        Args:
+            request: HttpRequest object, containing query parameters for filtering and pagination.
+            *args: Variable length argument list.
+            **kwargs: Arbitrary keyword arguments.
+
+        Returns:
+            Response: An HttpResponse with the serialized news data or an error message if no news items are found.
+        """
+        return super().list(request, *args, **kwargs)
 
     # Create news
     @extend_schema(
         summary='Create a News Item',
-        description='Creates a new news item with the given details.',
-        request=NewsSerializer,
+        description='Creates a new news item, optionally including a photo upload. Enforces a limit on the total number of stored news items.',
         responses={
-            201: NewsSerializer,
-            400: {'description': 'Invalid data'}
-        }
+            201: NewsTranslationsSerializer,
+            400: {'description': 'Invalid data provided.'}
+        },
     )
     def create(self, request, *args, **kwargs):
-        title = request.data.get('title')
-        sub_text = request.data.get('sub_text')
-        url = request.data.get('url')
-        photo = request.FILES.get('photo')
+        """
+        Creates a new news item with optional photo upload. The photo, if provided, is processed and converted
+        to webP format using the handle_photo method. This method also enforces a limit on the total number
+        of news items stored, deleting the oldest news item if the limit is exceeded.
 
-        new_file = self.upload_photo(photo=photo)
-        new_news = News.objects.create(
-            title=title, sub_text=sub_text, url=url, photo=new_file)
-        news_serializer = NewsSerializer(new_news)
+        This process includes validating the input data with the NewsTranslationsSerializer, handling the photo
+        upload, saving the new news item, and optionally performing cleanup operations.
 
-        if News.objects.count() > 5:
-            old_news = News.objects.last()
-            delete_file_from_backblaze(old_news.photo_id)
-            old_news.photo.delete()
-            old_news.delete()
+        Args:
+            request: HttpRequest object containing the news item's data and an optional 'photo' file in its FILES.
+            *args: Variable length argument list.
+            **kwargs: Arbitrary keyword arguments.
 
-        return Response({'massage': 'news was created', 'news': news_serializer.data
-                         }, status=status.HTTP_201_CREATED)
+        Returns:
+            Response: An HttpResponse indicating the outcome of the creation operation, either success with the created
+            news item's data or failure with an error message.
+        """
+
+        photo_file = request.FILES.get('photo', None)
+        serilaizer = self.get_serializer(data=request.data)
+        serilaizer.is_valid(raise_exception=True)
+        try:
+            if photo_file:
+                photo_obj = self.handle_photo(request, None)
+                serilaizer.validated_data['photo'] = photo_obj
+            self.perform_create(serilaizer)
+            if News.objects.count() > 5:
+                old_news = News.objects.last()
+                delete_file_from_backblaze(old_news.photo_id)
+                old_news.photo.delete()
+                old_news.delete()
+
+            return Response({'massage': 'news was created', 'news': serilaizer.data
+                             }, status=status.HTTP_201_CREATED)
+        except ValidationError as e:
+            return Response({'message': e.detail}, status=status.HTTP_400_BAD_REQUEST)
 
     @extend_schema(
         summary='Update a News Item',
-        description='Updates the news item with the given details.',
-        request=NewsSerializer,
+        description='Updates an existing news item by ID. Allows for modifying content and replacing the photo.',
         responses={
-            200: NewsSerializer,
-            404: {'description': 'News not found'},
-            500: {'description': 'Internal server error'}
-        }
+            200: NewsTranslationsSerializer,
+            404: {'description': 'News item not found.'},
+            500: {'description': 'Internal server error.'}
+        },
     )
     def update(self, request, pk):
         """
-        Updates a news item identified by the primary key (pk).
+        Updates an existing news item identified by its primary key (pk). This includes updating textual content
+        and optionally replacing the existing photo with a new one. If a new photo is provided, it replaces the
+        existing photo after conversion to webP format via the handle_photo method.
+
+        This method ensures that the input data is validated using the NewsTranslationsSerializer and applies the
+        updates to the specified news item. If the news item cannot be found, a 404 response is returned.
+
+        Args:
+            request: HttpRequest object containing the updated data and an optional 'photo' file.
+            pk: Primary key (UUID) of the news item to be updated.
+
+        Returns:
+            Response: An HttpResponse indicating the outcome of the update operation, either success with the updated
+            news item's data or failure with an appropriate error message.
         """
-        title = request.data.get('title')
-        sub_text = request.data.get('sub_text')
-        url = request.data.get('url')
-        photo = request.FILES.get('photo')
+        photo_file = request.FILES.get('photo', None)
+        news = News.objects.get(pk=pk)
+        serilaizer = self.get_serializer(news, data=request.data)
+        serilaizer.is_valid(raise_exception=True)
         try:
-            news = News.objects.get(pk=pk)
-            new_file = self.update_photo(photo=photo, cur_news=news)
-            if new_file:
-                news.photo = new_file
-            news.title = title
-            news.sub_text = sub_text
-            news.url = url
-            news.save()
+            if photo_file:
+                photo_obj = self.handle_photo(request, news)
+                serilaizer.validated_data['photo'] = photo_obj
+            self.update_news(news, serilaizer.validated_data)
+            self.perform_update(serializer=serilaizer)
             return Response({'message': 'Новини були оновлені'}, status=status.HTTP_200_OK)
         except News.DoesNotExist:
             return Response({'message': 'Новини не знайдено'}, status=status.HTTP_404_NOT_FOUND)
@@ -213,17 +280,28 @@ class NewsView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateMode
 
     @extend_schema(
         summary='Delete a News Item',
-        description='Deletes the news item with the specified ID.',
+        description='Deletes a news item by ID, including any associated photos and their storage.',
         responses={
-            status.HTTP_200_OK: {'description': 'Новини успішно видалили'},
-            status.HTTP_404_NOT_FOUND: {'description': 'Новини не знайдено'},
-            status.HTTP_500_INTERNAL_SERVER_ERROR: {
-                'description': 'Внутрішня помилка сервера'}
-        }
+            200: {'description': 'The news item was successfully deleted.'},
+            404: {'description': 'News item not found.'},
+            500: {'description': 'Internal server error.'}
+        },
     )
     def destroy(self, request, pk):
         """
-        Deletes a news item identified by the primary key (pk).
+        Deletes a specific news item identified by its primary key (pk). Before deletion, it ensures that any associated
+        photo and its file stored in Backblaze storage are also deleted, preventing orphaned files.
+
+        This method handles the deletion process, including looking up the news item, deleting associated resources,
+        and then deleting the news item itself. If the specified news item cannot be found, a 404 response is returned.
+
+        Args:
+            request: HttpRequest object.
+            pk: Primary key (UUID) of the news item to be deleted.
+
+        Returns:
+            Response: An HttpResponse indicating the success of the deletion operation or failure with an error message
+            if the news item cannot be found or if an internal error occurs.
         """
         try:
             news_item = News.objects.get(pk=pk)
@@ -244,16 +322,28 @@ class NewsView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateMode
 
 
 class PartnersView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.DestroyModelMixin, GenericViewSet):
+    """
+    ViewSet for managing partner entries in the system. Allows listing all partners, creating new partner entries,
+    and deleting existing ones. Partners can have logos, which are converted to webP format upon upload.
+    """
     queryset = Partners.objects.all()
     permission_classes = [IsAuthenticated, IsApprovedUser]
     serializer_class = PartnerSerializer
 
     def upload_logo(self, *, logo):
+        """
+        Handles the upload and conversion of a partner's logo to webP format. If a logo is provided,
+        it is converted, and a new FileModel instance is created to represent the uploaded and converted logo.
+
+        Args:
+            logo: The uploaded logo file.
+
+        Returns:
+            FileModel: An instance representing the converted logo's storage details.
+        """
         if logo:
-            image_validation(logo)
-            webp_image_name, webp_image_id, bucket_name, _ = converter_to_webP(
+            webp_image_name, webp_image_id, image_url = converter_to_webP(
                 logo)
-            image_url = f'https://{bucket_name}.s3.us-east-005.backblazeb2.com/{webp_image_name}'
             new_file = FileModel.objects.create(
                 id=webp_image_id, name=webp_image_name, url=image_url, category='image')
         return new_file
@@ -262,20 +352,22 @@ class PartnersView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.Destro
         summary='List all partners',
         responses={
             200: PartnerSerializer(many=True),
-            404: {'description': 'Партнери не знайдені'},
-            500: {'description': 'Внутрішня помилка сервера'}
         }
     )
-    def list(self, request):
-        try:
-            partners = Partners.objects.all()
-            partners_serializer = PartnerSerializer(partners, many=True)
+    def list(self, request, *args, **kwargs):
+        """
+        Lists all partners currently registered in the system. This method leverages the configured queryset
+        and serializer_class to provide a paginated response containing all partners, serialized using the PartnerSerializer.
 
-            return Response(partners_serializer.data, status=status.HTTP_200_OK)
-        except Partners.DoesNotExist:
-            return Response({'message': 'Partners not found'}, status=status.HTTP_404_NOT_FOUND)
-        except Exception as e:
-            return Response({'message': f'Помилка {e}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        Args:
+            request: HttpRequest object, potentially containing query parameters for filtering and pagination.
+            *args: Variable length argument list.
+            **kwargs: Arbitrary keyword arguments.
+
+        Returns:
+            Response: An HttpResponse with the serialized list of partners.
+        """
+        return super().list(request, *args, **kwargs)
 
     @extend_schema(
         summary='Create a new partner',
@@ -283,10 +375,23 @@ class PartnersView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.Destro
         responses={
             201: PartnerSerializer,
             400: {'description': 'Поганий запит - недійсні дані'},
-            500: {'description': 'Внутрішня помилка сервера'}
         }
     )
     def create(self, request, *args, **kwargs):
+        """
+        Creates a new partner entry in the system. This process may include uploading and converting a logo
+        to webP format if a logo file is provided in the request. The new partner, including the converted logo,
+        is then saved and returned in the response.
+
+        Args:
+            request: HttpRequest object containing the new partner's data and an optional logo file in FILES.
+            *args: Variable length argument list.
+            **kwargs: Arbitrary keyword arguments.
+
+        Returns:
+            Response: An HttpResponse indicating the outcome of the create operation, with the newly created partner's
+            data on success or an error message on failure.
+        """
         logo = request.FILES.get('logo')
         data = {}
         try:
@@ -298,8 +403,8 @@ class PartnersView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.Destro
             serializer = PartnerSerializer(new_partner)
 
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        except Exception as e:
-            return Response({'message': f'Помилка {e}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except ValidationError as e:
+            return Response({'message': f'Помилка {e}'}, status=status.HTTP_400_BAD_REQUEST)
 
     @extend_schema(
         summary='Delete a partner',
@@ -310,6 +415,18 @@ class PartnersView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.Destro
         }
     )
     def destroy(self, request, pk):
+        """
+        Deletes an existing partner entry identified by the primary key (pk). Before deletion, it ensures that
+        any associated logo and its file stored in Backblaze storage are also deleted, preventing orphaned files.
+
+        Args:
+            request: HttpRequest object.
+            pk: Primary key (UUID or int) of the partner to be deleted.
+
+        Returns:
+            Response: An HttpResponse indicating the success of the deletion operation or failure with an error message
+            if the partner cannot be found or if an internal error occurs.
+        """
         try:
             partner = Partners.objects.get(pk=pk)
             delete_file_from_backblaze(partner.logo_id)

@@ -10,7 +10,6 @@ def image_validation(image_obj):
         raise ValidationError(detail={'error': 'Недійсний формат'})
 
 
-
 def document_validation(document_obj):
     if not document_obj:
         raise ValidationError(detail={'error': 'Документ не знайдено'})
