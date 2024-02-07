@@ -193,10 +193,42 @@ class NewsView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateMode
     @extend_schema(
         summary='Create a News Item',
         description='Creates a new news item, optionally including a photo upload. Enforces a limit on the total number of stored news items.',
+        request={
+            'multipart/form-data': {
+                    'type': 'object',
+                    'properties': {
+                        'title': {
+                            'type': 'string',
+                            'maxLength': 100
+                        },
+                        'title_en': {
+                            'type': 'string',
+                            'maxLength': 100
+                        },
+                        'sub_text': {
+                            'type': 'string',
+                            'maxLength': 100
+                        },
+                        'sub_text_en': {
+                            'type': 'string',
+                            'maxLength': 100
+                        },
+                        'url': {
+                            'type': 'string',
+                            'format': 'uri'
+                        },
+                        'photo': {
+                            'type': 'string',
+                            'format': 'binary'
+                        }
+                    },
+                'required': ['title',  'sub_text',  'url', 'photo'],
+            }
+        },
         responses={
             201: NewsTranslationsSerializer,
             400: {'description': 'Invalid data provided.'}
-        },
+        }
     )
     def create(self, request, *args, **kwargs):
         """
@@ -239,6 +271,38 @@ class NewsView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateMode
     @extend_schema(
         summary='Update a News Item',
         description='Updates an existing news item by ID. Allows for modifying content and replacing the photo.',
+        request={
+            'multipart/form-data': {
+                    'type': 'object',
+                    'properties': {
+                        'title': {
+                            'type': 'string',
+                            'maxLength': 100
+                        },
+                        'title_en': {
+                            'type': 'string',
+                            'maxLength': 100
+                        },
+                        'sub_text': {
+                            'type': 'string',
+                            'maxLength': 300
+                        },
+                        'sub_text_en': {
+                            'type': 'string',
+                            'maxLength': 300
+                        },
+                        'url': {
+                            'type': 'string',
+                            'format': 'uri'
+                        },
+                        'photo': {
+                            'type': 'string',
+                            'format': 'binary'
+                        }
+                    },
+                'required': ['title',  'sub_text',  'url', 'photo'],
+            }
+        },
         responses={
             200: NewsTranslationsSerializer,
             404: {'description': 'News item not found.'},
@@ -371,7 +435,17 @@ class PartnersView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.Destro
 
     @extend_schema(
         summary='Create a new partner',
-        request=PartnerSerializer,
+        request={
+            'multipart/form-data': {
+                'type': 'object',
+                'properties': {
+                        'logo': {
+                            'type': 'string',
+                            'format': 'binary'
+                        }
+                }
+            }
+        },
         responses={
             201: PartnerSerializer,
             400: {'description': 'Поганий запит - недійсні дані'},

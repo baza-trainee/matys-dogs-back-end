@@ -339,7 +339,67 @@ class DogCardView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateM
     @extend_schema(
         summary='Create a new dog card',
         description='Allows the creation of a new dog card with the provided details including an optional photo.',
-        request=DogCardTranslationSerializer,
+        request={
+            'multipart/form-data': {
+                'type': 'object',
+                'properties': {
+                    'name': {'type': 'string'},
+                    'name_en': {'type': 'string'},
+                    'ready_for_adoption': {'type': 'boolean'},
+                    'gender': {
+                        'type': 'string',
+                        # List of accepted values
+                        'enum': ['хлопчик', 'дівчинка'],
+                        'description': 'Gender of the dog',
+                    },
+                    'gender_en': {
+                        'type': 'string',
+                        # List of accepted values
+                        'enum': ['boy', 'girl'],
+                        'description': 'Gender of the dog',
+                    },
+                    'age': {
+                        'type': 'string',
+                        # List of accepted values
+                        'enum': ['щеня',
+                                 'молода собака',
+                                 'доросла собака',],
+                        'description': 'Age of the dog',
+                    },
+                    'age_en': {
+                        'type': 'string',
+                        # List of accepted values
+                        'enum': ['puppy',
+                                 'young dog',
+                                 'adult dog'],
+                        'description': 'Age of the dog',
+                    },
+                    'sterilization': {'type': 'boolean'},
+                    'vaccination_parasite_treatment': {'type': 'boolean'},
+                    'size': {
+                        'type': 'string',
+                        # List of accepted values
+                        'enum': ['маленький',
+                                 'середній',
+                                 'великий'],
+                        'description': 'Size of the dog',
+                    },
+                    'size_en': {
+                        'type': 'string',
+                        # List of accepted values
+                        'enum': ['small',
+                                 'medium',
+                                 'large',],
+                        'description': 'Size of the dog',
+                    },
+                    'description': {'type': 'string'},
+                    'description_en': {'type': 'string'},
+                    'photo': {'type': 'string', 'format': 'binary', 'nullable': True}
+                },
+                # Add required fields here
+                'required': ['name', 'ready_for_adoption', 'gender', 'age', 'sterilization', 'vaccination_parasite_treatment', 'size', 'description'],
+            }
+        },
         responses={
             201: DogCardTranslationSerializer,
             400: 'Bad Request if the input data is invalid.'
@@ -366,7 +426,67 @@ class DogCardView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateM
     @extend_schema(
         summary='Update a dog card',
         description='Updates the details of an existing dog card identified by the given primary key.',
-        request=DogCardTranslationSerializer,
+        request={
+            'multipart/form-data': {
+                'type': 'object',
+                'properties': {
+                    'name': {'type': 'string'},
+                    'name_en': {'type': 'string'},
+                    'ready_for_adoption': {'type': 'boolean'},
+                    'gender': {
+                        'type': 'string',
+                        # List of accepted values
+                        'enum': ['хлопчик', 'дівчинка'],
+                        'description': 'Gender of the dog',
+                    },
+                    'gender_en': {
+                        'type': 'string',
+                        # List of accepted values
+                        'enum': ['boy', 'girl'],
+                        'description': 'Gender of the dog',
+                    },
+                    'age': {
+                        'type': 'string',
+                        # List of accepted values
+                        'enum': ['щеня',
+                                 'молода собака',
+                                 'доросла собака',],
+                        'description': 'Age of the dog',
+                    },
+                    'age_en': {
+                        'type': 'string',
+                        # List of accepted values
+                        'enum': ['puppy',
+                                 'young dog',
+                                 'adult dog'],
+                        'description': 'Age of the dog',
+                    },
+                    'sterilization': {'type': 'boolean'},
+                    'vaccination_parasite_treatment': {'type': 'boolean'},
+                    'size': {
+                        'type': 'string',
+                        # List of accepted values
+                        'enum': ['маленький',
+                                 'середній',
+                                 'великий'],
+                        'description': 'Size of the dog',
+                    },
+                    'size_en': {
+                        'type': 'string',
+                        # List of accepted values
+                        'enum': ['small',
+                                 'medium',
+                                 'large',],
+                        'description': 'Size of the dog',
+                    },
+                    'description': {'type': 'string'},
+                    'description_en': {'type': 'string'},
+                    'photo': {'type': 'string', 'format': 'binary', 'nullable': True}
+                },
+                # Add required fields here
+                'required': ['name', 'ready_for_adoption', 'gender', 'age', 'sterilization', 'vaccination_parasite_treatment', 'size', 'description'],
+            }
+        },
         responses={
             200: DogCardTranslationSerializer,
             404: 'Not Found if the dog card does not exist.',

@@ -10,7 +10,7 @@ from backblaze.models import FileModel
 from backblaze.serializer import FileSerializer
 from rest_framework.viewsets import GenericViewSet
 from rest_framework import mixins
-from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.utils import extend_schema, extend_schema_field, OpenApiParameter, OpenApiExample
 from drf_spectacular.types import OpenApiTypes
 from rest_framework.validators import ValidationError
 from api.models import IsApprovedUser
@@ -82,15 +82,26 @@ class AboutImages(mixins.ListModelMixin, mixins.CreateModelMixin, GenericViewSet
         return super().list(request, *args, **kwargs)
 
     @extend_schema(
-        summary='Create a new image entry in AboutModel',
-        description="Adds new image entries to the AboutModel instance, converting them to webP format.",
+        summary='Upload images to AboutModel',
+        description="Uploads multiple images to AboutModel, automatically converting them to webP format. Supports bulk upload.",
+        request={
+            'multipart/form-data': {
+                    'type': 'object',
+                    'properties': {
+                        'images': {
+                            'type': 'string',
+                            'format': 'binary'
+                        }
+                    }
+            }
+        },
         responses={
-            201: FileSerializer(many=True),
-            400: {'description': 'Bad request'},
+            201: ImagesSerializer,
+            400: 'Bad request',
         }
     )
     def create(self, request):
-        """
+        """ 
         Creates a new image entry or entries in the AboutModel by uploading images. Uploaded images are
         automatically converted to webP format. Supports bulk upload.
 
@@ -112,13 +123,11 @@ class AboutImages(mixins.ListModelMixin, mixins.CreateModelMixin, GenericViewSet
             for image in images:
                 webp_image_name, webp_image_id, image_url = converter_to_webP(
                     image)
-                file_model, created = FileModel.objects.get_or_create(
+                file_model = FileModel.objects.create(
                     id=webp_image_id,
-                    defaults={
-                        'name': webp_image_name,
-                        'url': image_url,
-                        'category': 'image'
-                    }
+                    name=webp_image_name,
+                    url=image_url,
+                    category='image'
                 )
                 about.images.add(file_model)
                 created_files.append(file_model)
