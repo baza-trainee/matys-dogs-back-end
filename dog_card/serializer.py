@@ -1,8 +1,8 @@
 from rest_framework.serializers import ModelSerializer
 from dog_card.models import DogCardModel
 from backblaze.serializer import FileSerializer
-
-
+from django.db import transaction
+from backblaze.utils.b2_utils import delete_file_from_backblaze
 # Serializers define the API representation.
 
 
@@ -11,16 +11,27 @@ class DogCardSerializer(ModelSerializer):
 
     class Meta:
         model = DogCardModel
-        fields = ('id', 'name', 'ready_for_adoption',
-                  'gender', 'age', 'sterilization', 'vaccination_parasite_treatment', 'size', 'description', 'photo')
+        fields = (
+            'id',
+            'name',
+            'ready_for_adoption',
+            'gender',
+            'age',
+            'sterilization',
+            'vaccination_parasite_treatment',
+            'size',
+            'description',
+            'photo'
+        )
 
 
-class DogCardCreateSerializer(ModelSerializer):
-    photo = FileSerializer()
+class DogCardTranslationSerializer(ModelSerializer):
+    photo = FileSerializer(allow_null=True, required=False)
 
     class Meta:
         model = DogCardModel
         fields = (
+            'id',
             'name',
             'name_en',
             'ready_for_adoption',
@@ -36,3 +47,31 @@ class DogCardCreateSerializer(ModelSerializer):
             'description_en',
             'photo'
         )
+
+    def create(self, validated_data):
+        with transaction.atomic():
+            photo_data = validated_data.pop('photo', None)
+            dog_card = DogCardModel.objects.create(**validated_data)
+            if photo_data:
+                photo_obj = self.context['view'].handle_photo(
+                    self.context['request'], None)
+                dog_card.photo = photo_obj
+                dog_card.save()
+            return dog_card
+
+    def update(self, instance, validated_data):
+        with transaction.atomic():
+            photo_data = validated_data.pop('photo', None)
+            dog_card = super().update(instance, validated_data)
+            if photo_data:
+                photo_obj = self.context['view'].handle_photo(
+                    self.context['request'], dog_card)
+                if photo_obj:
+                    dog_card.photo = photo_obj
+                    dog_card.save()
+            return dog_card
+
+    def destroy(self, instance, *args, **kwargs):
+        if self.photo:
+            delete_file_from_backblaze(self.photo_id)
+        super().delete(*args, **kwargs)

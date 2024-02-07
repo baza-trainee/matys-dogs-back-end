@@ -4,9 +4,11 @@ import os
 from cairosvg import svg2png
 from io import BytesIO
 from rest_framework.exceptions import ValidationError
-
+from backblaze.utils.validation import image_validation
 
 # Initialize B2 API
+
+
 def initialize_b2api():
     required_env_varibles = ['APPLICATION_KEY_ID', 'APPLICATION_KEY',
                              'BUCKET_NAME_IMG']
@@ -29,10 +31,11 @@ def initialize_b2api():
 
 # Convert to webp
 def converter_to_webP(file_obj):
-    
-    try:
-        bucket, bucket_name = initialize_b2api()
 
+    try:
+        image_validation(file_obj)
+        bucket, bucket_name = initialize_b2api()
+        file_obj.seek(0)
         if file_obj.name.endswith('.svg'):
             # conver to png
             png_data = svg2png(bytestring=file_obj.read())
@@ -54,8 +57,8 @@ def converter_to_webP(file_obj):
 
         webp_image_name = file_info.file_name
         webp_image_id = file_info.id_
-
-        return webp_image_name, webp_image_id, bucket_name
+        image_url = f'https://{bucket_name}.s3.us-east-005.backblazeb2.com/{webp_image_name}'
+        return webp_image_name, webp_image_id, image_url
     except Exception as e:
         raise ValidationError(detail={f"Error converting to webp: {e}"})
 

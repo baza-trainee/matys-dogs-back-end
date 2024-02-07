@@ -16,6 +16,7 @@ from rest_framework.decorators import action
 from drf_spectacular.utils import extend_schema
 from django.contrib.auth.hashers import make_password
 from drf_spectacular.utils import OpenApiResponse
+from rest_framework import viewsets
 import json
 import os
 import re
@@ -359,3 +360,8 @@ class AuthenticationService(ViewSet):
             return Response({"message": "Електронна пошта була успішно надіслана"})
         except User.DoesNotExist:
             return Response({"error": "Електронна пошта не існує"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class UserViewSet(viewsets.ModelViewSet):
+    queryset = UserMini.objects.all()
+    pass

@@ -40,15 +40,12 @@ class UploadImage(mixins.ListModelMixin, mixins.CreateModelMixin, GenericViewSet
 
         for file_obj in uploaded_files:
             try:
-                # Validate image
-                image_validation(file_obj)
 
                 # Convert image to webp
-                webp_image_name, webp_image_id, bucket_name, size = converter_to_webP(
+                webp_image_name, webp_image_id, image_url = converter_to_webP(
                     file_obj)
 
                 # Save image to database
-                image_url = f'https://{bucket_name}.s3.us-east-005.backblazeb2.com/{webp_image_name}'
                 file_model = FileModel(id=webp_image_id, name=webp_image_name,
                                        url=image_url, category='image')
                 file_model.save()
@@ -58,7 +55,6 @@ class UploadImage(mixins.ListModelMixin, mixins.CreateModelMixin, GenericViewSet
                     'image_url': image_url,
                     'image_id': webp_image_id,
                     'image_name': webp_image_name,
-                    'size': size
                 })
 
             except ValidationError as e:
