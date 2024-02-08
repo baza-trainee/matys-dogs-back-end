@@ -109,7 +109,7 @@ class NewsView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateMode
     queryset = News.objects.all()
     serializer_class = NewsTranslationsSerializer
 
-    def handle_photo(self, request, news):
+    def handle_photo(self, photo, news):
         """
         Handles the upload and conversion of a photo to webP format. If the news item already has a photo,
         it deletes the existing photo and its associated file in Backblaze storage before updating.
@@ -121,17 +121,17 @@ class NewsView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateMode
         Returns:
             A FileModel instance representing the uploaded and converted photo.
         """
-        photo = request.FILES.get('photo')
-        if photo:
-            if news and news.photo:
-                news.photo.delete()
-                delete_file_from_backblaze(news.photo_id)
+        if not photo:
+            return None
+        if news and news.photo:
+            news.photo.delete()
+            delete_file_from_backblaze(news.photo_id)
 
-            webp_image_name, webp_image_id, image_url = converter_to_webP(
-                photo)
-            return FileModel.objects.create(
-                id=webp_image_id, name=webp_image_name, url=image_url, category='image'
-            )
+        webp_image_name, webp_image_id, image_url = converter_to_webP(
+            photo)
+        return FileModel.objects.create(
+            id=webp_image_id, name=webp_image_name, url=image_url, category='image'
+        )
 
     def perform_create(self, serilaizer):
         """
@@ -249,18 +249,17 @@ class NewsView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateMode
             news item's data or failure with an error message.
         """
 
-        photo_file = request.FILES.get('photo', None)
-        serilaizer = self.get_serializer(data=request.data)
-        serilaizer.is_valid(raise_exception=True)
         try:
-            if photo_file:
-                photo_obj = self.handle_photo(request, None)
-                serilaizer.validated_data['photo'] = photo_obj
-            self.perform_create(serilaizer)
+            serilaizer = self.get_serializer(
+                data=request.data, context={'request': request, 'view': self})
+            serilaizer.is_valid(raise_exception=True)
+            serilaizer.save()
+
             if News.objects.count() > 5:
                 old_news = News.objects.last()
-                delete_file_from_backblaze(old_news.photo_id)
-                old_news.photo.delete()
+                if old_news.photo is not None:
+                    delete_file_from_backblaze(old_news.photo_id)
+                    old_news.photo.delete()
                 old_news.delete()
 
             return Response({'massage': 'news was created', 'news': serilaizer.data
@@ -326,14 +325,12 @@ class NewsView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateMode
             Response: An HttpResponse indicating the outcome of the update operation, either success with the updated
             news item's data or failure with an appropriate error message.
         """
-        photo_file = request.FILES.get('photo', None)
         news = News.objects.get(pk=pk)
-        serilaizer = self.get_serializer(news, data=request.data)
+        serilaizer = self.get_serializer(news, data=request.data, context={
+                                         'request': request, 'view': self})
         serilaizer.is_valid(raise_exception=True)
         try:
-            if photo_file:
-                photo_obj = self.handle_photo(request, news)
-                serilaizer.validated_data['photo'] = photo_obj
+
             self.update_news(news, serilaizer.validated_data)
             self.perform_update(serializer=serilaizer)
             return Response({'message': 'Новини були оновлені'}, status=status.HTTP_200_OK)

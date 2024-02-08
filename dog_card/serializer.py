@@ -1,7 +1,6 @@
 from rest_framework.serializers import ModelSerializer
 from dog_card.models import DogCardModel
 from backblaze.serializer import FileSerializer
-from django.db import transaction
 from backblaze.utils.b2_utils import delete_file_from_backblaze
 # Serializers define the API representation.
 
@@ -49,27 +48,25 @@ class DogCardTranslationSerializer(ModelSerializer):
         )
 
     def create(self, validated_data):
-        with transaction.atomic():
-            photo_data = validated_data.pop('photo', None)
-            dog_card = DogCardModel.objects.create(**validated_data)
-            if photo_data:
-                photo_obj = self.context['view'].handle_photo(
-                    self.context['request'], None)
-                dog_card.photo = photo_obj
-                dog_card.save()
-            return dog_card
+        photo_data = self.context['request'].FILES.get('photo', None)
+        dog_card = DogCardModel.objects.create(**validated_data)
+        if photo_data:
+            photo_obj = self.context['view'].handle_photo(
+                photo_data, None)
+            dog_card.photo = photo_obj
+            dog_card.save()
+        return dog_card
 
     def update(self, instance, validated_data):
-        with transaction.atomic():
-            photo_data = validated_data.pop('photo', None)
-            dog_card = super().update(instance, validated_data)
-            if photo_data:
-                photo_obj = self.context['view'].handle_photo(
-                    self.context['request'], dog_card)
-                if photo_obj:
-                    dog_card.photo = photo_obj
-                    dog_card.save()
-            return dog_card
+        photo_data = self.context['request'].FILES.get('photo', None)
+        dog_card = super().update(instance, validated_data)
+        if photo_data:
+            photo_obj = self.context['view'].handle_photo(
+                photo_data, dog_card)
+            if photo_obj:
+                dog_card.photo = photo_obj
+                dog_card.save()
+        return dog_card
 
     def destroy(self, instance, *args, **kwargs):
         if self.photo:
