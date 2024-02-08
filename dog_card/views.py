@@ -290,7 +290,7 @@ class DogCardView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateM
         """
         serilaizer.save()
 
-    def handle_photo(self, request, dog_card):
+    def handle_photo(self, photo, dog_card):
         """
         Handles the photo upload process for a DogCardModel instance.
 
@@ -301,17 +301,17 @@ class DogCardView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateM
         Returns:
             A FileModel instance representing the uploaded photo.
         """
-        photo = request.FILES.get('photo')
-        if photo:
-            if dog_card and dog_card.photo:
-                dog_card.photo.delete()
-                delete_file_from_backblaze(dog_card.photo_id)
+        if not photo:
+            return None
+        if dog_card and dog_card.photo:
+            dog_card.photo.delete()
+            delete_file_from_backblaze(dog_card.photo_id)
 
-            webp_image_name, webp_image_id, image_url = converter_to_webP(
-                photo)
-            return FileModel.objects.create(
-                id=webp_image_id, name=webp_image_name, url=image_url, category='image'
-            )
+        webp_image_name, webp_image_id, image_url = converter_to_webP(
+            photo)
+        return FileModel.objects.create(
+            id=webp_image_id, name=webp_image_name, url=image_url, category='image'
+        )
 
     @extend_schema(
         summary='Retrieve a list of all dog cards',
@@ -411,17 +411,17 @@ class DogCardView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateM
 
         Handles the photo file separately, using the handle_photo method to process it.
         """
-        photo_file = request.FILES.get('photo', None)
-        serilaizer = self.get_serializer(data=request.data)
+        serilaizer = self.get_serializer(
+            data=request.data, context={'request': request, 'view': self})
         serilaizer.is_valid(raise_exception=True)
         try:
-            if photo_file:
-                photo_obj = self.handle_photo(request, None)
-                serilaizer.validated_data['photo'] = photo_obj
+
             self.perform_create(serilaizer)
             return Response({'message': 'Карта створена', 'new_dogs_card': serilaizer.data}, status=status.HTTP_201_CREATED)
         except ValidationError as e:
             return Response({'message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @extend_schema(
         summary='Update a dog card',
@@ -504,14 +504,11 @@ class DogCardView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateM
         Returns a response indicating the outcome of the update operation.
         """
         try:
-            photo_file = request.FILES.get('photo', None)
             dog_card = DogCardModel.objects.get(pk=pk)
-            serializer = self.get_serializer(dog_card, data=request.data)
+            serializer = self.get_serializer(dog_card, data=request.data, context={
+                                             'request': request, 'view': self})
             serializer.is_valid(raise_exception=True)
 
-            if photo_file:
-                photo_obj = self.handle_photo(request, dog_card)
-                serializer.validated_data['photo'] = photo_obj
             self.update_dog_card(dog_card, serializer.validated_data)
             self.perform_update(serializer=serializer)
             return Response({'message': 'Карта оновлена', 'updated_dog_card': serializer.data},

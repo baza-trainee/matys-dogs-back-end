@@ -5,6 +5,13 @@ from cairosvg import svg2png
 from io import BytesIO
 from rest_framework.exceptions import ValidationError
 from backblaze.utils.validation import image_validation
+# Constants for default values
+DEFAULT_QUALITY = 80
+DEFAULT_LOSSY_QUALITY = 50
+QUALITY_STEP = 5
+LOSSY_QUALITY_STEP = 6
+TARGET_SIZE = 200000
+MIN_DIMENSION = 100
 
 # Initialize B2 API
 
@@ -29,47 +36,69 @@ def initialize_b2api():
         raise ValidationError(f"Error initializing B2 API: {e}")
 
 
-# Convert to webp
-def converter_to_webP(file_obj):
+bucket, bucket_name = initialize_b2api()
 
+
+def read_file(file_obj):
+    file_obj.seek(0)
+    bytes_read = file_obj.read()
+    if file_obj.name.endswith('.svg'):
+        # conver to png
+        png_data = svg2png(bytestring=bytes_read)
+        # convert to webp
+        image = Image.open(BytesIO(png_data)).convert('RGB')
+    else:
+        image = Image.open(BytesIO(bytes_read)).convert('RGB')
+    return image
+
+# Convert to webp
+
+
+def upload_to_backblaze(byte_arr, file_obj):
+    webp_file_name = os.path.splitext(file_obj.name)[0] + '.webp'
+    file_info = bucket.upload_bytes(
+        byte_arr.getvalue(), file_name=webp_file_name)
+
+    webp_image_name = file_info.file_name
+    webp_image_id = file_info.id_
+    image_url = f'https://{bucket_name}.s3.us-east-005.backblazeb2.com/{webp_image_name}'
+
+    return webp_image_name, webp_image_id, image_url
+
+
+# Convert to webp
+
+def converter_to_webP(file_obj):
     try:
         image_validation(file_obj)
-        bucket, bucket_name = initialize_b2api()
-        file_obj.seek(0)
-        if file_obj.name.endswith('.svg'):
-            # conver to png
-            png_data = svg2png(bytestring=file_obj.read())
-            # convert to webp
-            image = Image.open(BytesIO(png_data)).convert('RGB')
-        else:
-            image = Image.open(BytesIO(file_obj.read())).convert('RGB')
-
-        # compress image
+        image = read_file(file_obj)
         byte_arr = compress_image(image)
-        # check size
         if byte_arr.tell() > 2097152:
             raise ValidationError(
                 detail={'error': 'Розмір зображення не повинен перевищувати 2MB'})
-        # upload image to backblaze
-        webp_file_name = os.path.splitext(file_obj.name)[0] + '.webp'
-        file_info = bucket.upload_bytes(
-            byte_arr.getvalue(), file_name=webp_file_name)
 
-        webp_image_name = file_info.file_name
-        webp_image_id = file_info.id_
-        image_url = f'https://{bucket_name}.s3.us-east-005.backblazeb2.com/{webp_image_name}'
-        return webp_image_name, webp_image_id, image_url
+        return upload_to_backblaze(byte_arr, file_obj)
     except Exception as e:
         raise ValidationError(detail={f"Error converting to webp: {e}"})
 
 
+def resize_image(image, refactor_size, min_dimension=MIN_DIMENSION):
+    if (image.width and image.height) > min_dimension:
+        new_width = int(image.width * refactor_size)
+        new_height = int(image.height * refactor_size)
+        current_image = current_image.resize((new_width, new_height))
+
 # Compress image
-def compress_image(image, quality=80, lossy_quality=50, step_quality=4, step_lossy_quality=5, refactor_size=0.5, target_size=250000, min_dimension=100):
+
+
+def compress_image(image, quality=DEFAULT_QUALITY, lossy_quality=DEFAULT_LOSSY_QUALITY,
+                   step_quality=QUALITY_STEP, step_lossy_quality=LOSSY_QUALITY_STEP,
+                   target_size=TARGET_SIZE):
     if not isinstance(image, Image.Image):
         raise ValidationError(detail={'error': 'Недійсний об’єкт зображення'})
     byte_arr = BytesIO()
     current_image = image
-    while quality >= 10 and (current_image.width > min_dimension or current_image.height > min_dimension):
+    while byte_arr.tell() > target_size and quality >= 10:
         byte_arr.seek(0)
         byte_arr.truncate(0)
         current_image.save(byte_arr, format='webp', optimize=True,
@@ -77,29 +106,12 @@ def compress_image(image, quality=80, lossy_quality=50, step_quality=4, step_los
 
         if byte_arr.tell() <= target_size:
             break
-        if byte_arr.tell() > target_size and (current_image.width > min_dimension or current_image.height > min_dimension):
-            new_width = int(image.width * refactor_size)
-            new_height = int(image.height * refactor_size)
-            current_image = current_image.resize((new_width, new_height))
+
+        current_image = resize_image(current_image, refactor_size)
         quality -= step_quality
         lossy_quality -= step_lossy_quality
-        refactor_size *= 0.85
+        refactor_size *= 0.8
     return byte_arr
-
-
-# Document simplify and upload
-
-
-def document_simplify_upd(file_obj):
-    try:
-        bucket, bucket_name = initialize_b2api()
-        file_info = bucket.upload_bytes(
-            file_obj.read(), file_name=file_obj.name)
-        doc_name = file_obj.name
-        doc_id = file_info.id_
-        return doc_name, doc_id, bucket_name
-    except Exception as e:
-        raise ValidationError(detail={f"Error uploading document: {e}"})
 
 
 # Delete file from backblaze
@@ -109,7 +121,6 @@ def delete_file_from_backblaze(id):
     if not id:
         raise ValidationError(detail={'error': 'File id is required'})
     try:
-        bucket, _ = initialize_b2api()
         # Get file info by id
         file_info = bucket.get_file_info_by_id(file_id=id)
         # Delete file
