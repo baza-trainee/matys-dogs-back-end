@@ -223,19 +223,11 @@ class AboutEmployment(mixins.ListModelMixin, mixins.CreateModelMixin, GenericVie
             Response: An HttpResponse indicating the outcome of the update operation, including the updated
             data on success or an error message on failure.
         """
-        data = json.loads(request.body)
         try:
-            about = AboutModel.objects.filter(id=2).first()
-
-            about.quantity_of_animals = data.get(
-                'quantity_of_animals', about.quantity_of_animals)
-            about.quantity_of_employees = data.get(
-                'quantity_of_employees', about.quantity_of_employees)
-            about.quantity_of_succeeds_adoptions = data.get(
-                'quantity_of_succeeds_adoptions', about.quantity_of_succeeds_adoptions)
-
-            about.save()
-            serializer = EmploymentSerializer(about)
+            instance = AboutModel.objects.filter(id=2).first()
+            serializer = EmploymentSerializer(instance, data=request.data)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         except ValidationError:
             return Response({'message': 'Поганий запит - недійсні дані'}, status=status.HTTP_400_BAD_REQUEST)

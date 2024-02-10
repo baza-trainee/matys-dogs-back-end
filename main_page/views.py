@@ -1,16 +1,13 @@
 from django.http import Http404
-from django.shortcuts import get_object_or_404
 from rest_framework.response import Response
 from rest_framework import status
 from main_page.models import NewsModel as News, Partners
 from backblaze.utils.b2_utils import converter_to_webP, delete_file_from_backblaze
-from backblaze.utils.validation import image_validation
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from backblaze.models import FileModel
 from dog_card.models import DogCardModel
 from main_page.serializer import NewsSerializer, NewsTranslationsSerializer, PartnerSerializer
 from dog_card.serializer import DogCardSerializer
-from rest_framework.permissions import AllowAny
 from rest_framework.viewsets import GenericViewSet
 from rest_framework import mixins
 from drf_spectacular.types import OpenApiTypes

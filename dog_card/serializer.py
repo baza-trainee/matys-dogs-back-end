@@ -72,3 +72,13 @@ class DogCardTranslationSerializer(ModelSerializer):
         if self.photo:
             delete_file_from_backblaze(self.photo_id)
         super().delete(*args, **kwargs)
+
+
+class DogForPick(ModelSerializer):
+
+    class Meta:
+        model = DogCardModel
+        fields = (
+            'id',
+            'name',
+        )

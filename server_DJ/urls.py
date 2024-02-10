@@ -27,6 +27,7 @@ urlpatterns = [
     path('', include('dog_card.urls')),
     path('', include('main_page.urls')),
     path('', include('about.urls')),
+    path('', include('formcallback.urls')),
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/docs/swagger-ui', SpectacularSwaggerView.as_view(url_name='schema'),
          name='swagger-ui')

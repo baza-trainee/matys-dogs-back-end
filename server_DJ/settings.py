@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     'main_page',
     'dog_card',
     'backblaze',
+    'formcallback',
     'api',
     'about'
 
@@ -143,6 +144,14 @@ REST_FRAMEWORK = {
 
     ),
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle'
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '2/minute',  # Adjust the rate as necessary
+        'user': '10/minute'  # Adjust the rate as necessary
+    }
 }
 
 SPECTACULAR_SETTINGS = {
@@ -167,7 +176,6 @@ SIMPLE_JWT = {
 
 
 def gettext(s): return s
-
 
 
 LANGUAGES = (
