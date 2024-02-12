@@ -36,7 +36,7 @@ class CallBackPost(mixins.CreateModelMixin, GenericViewSet):
                         'comment': {
                             'type': 'string',
                         },
-                        'dog_id': {
+                        'id_dog': {
                             'type': 'integer',
                         }
                     },
@@ -115,5 +115,7 @@ class NotificationAdmin(mixins.ListModelMixin, mixins.UpdateModelMixin, GenericV
             return Response(serializer.data, status=status.HTTP_200_OK)
         except ValidationError:
             return Response({'message': 'Поганий запит - недійсні дані'}, status=status.HTTP_400_BAD_REQUEST)
+        except CallbackForm.DoesNotExist:
+            return Response({'message': 'Помилка - не знайдено'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({'message': f'Помилка {e}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
