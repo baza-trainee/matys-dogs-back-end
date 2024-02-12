@@ -6,17 +6,19 @@ from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
-from rest_framework import status
+from rest_framework import status, mixins
 from django.contrib.auth.models import User
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import UserMini
 from django.conf import settings
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework.decorators import action
 from drf_spectacular.utils import extend_schema
 from django.contrib.auth.hashers import make_password
 from drf_spectacular.utils import OpenApiResponse
-from rest_framework import viewsets
+from rest_framework.viewsets import GenericViewSet
+from .serializer import UserMiniSerializer, UserToApprove
+from drf_spectacular.utils import extend_schema
 import json
 import os
 import re
@@ -361,7 +363,123 @@ class AuthenticationService(ViewSet):
         except User.DoesNotExist:
             return Response({"error": "Електронна пошта не існує"}, status=status.HTTP_400_BAD_REQUEST)
 
+    @action(detail=False, permission_classes=[IsAuthenticated], methods=['GET'], url_path='is_auth')
+    def is_Auth(self, request, *args, **kwargs):
+        """
+        Check if the user is authenticated.
 
-class UserViewSet(viewsets.ModelViewSet):
+        This method is used to determine if the user making the request is authenticated or not. It returns a response indicating whether the user is authenticated or not.
+
+        Parameters:
+        - request: The HTTP request object.
+
+        Returns:
+        - Response: A JSON response containing the authentication status of the user. The response has a single key-value pair, where the key is 'is_authenticated' and the value is a boolean indicating whether the user is authenticated or not.
+
+        Example:
+            HTTP GET /is_auth
+
+            Response:
+            {
+                "is_authenticated": true
+            }
+        """
+        return Response({'is_authenticated': request.user.is_authenticated})
+
+
+class AdminService(mixins.ListModelMixin, mixins.UpdateModelMixin, GenericViewSet):
+    """
+    A viewset for admin operations on UserMini instances.
+
+    This viewset provides administrators with the capabilities to list all UserMini instances
+    and update specific user details. Access is restricted to authenticated users with admin privileges.
+
+    Attributes:
+        permission_classes (list): A list of permissions checks the viewset uses to grant or deny access.
+        queryset (QuerySet): The queryset that should be used for listing users, typically all instances of UserMini.
+        serializer_class (Serializer): The serializer class used for serializing and deserializing input and output data.
+    """
+    permission_classes = [IsAuthenticated, IsAdminUser]
     queryset = UserMini.objects.all()
-    pass
+    serializer_class = UserMiniSerializer
+
+    @extend_schema(
+        summary="List all UserMini instances",
+        description="Retrieves a list of all UserMini instances from the database. This endpoint is accessible only to users with admin privileges.",
+        responses={200: UserMiniSerializer(many=True)},
+        tags=["Admin", "User Management"],
+    )
+    def list(self, request, *args, **kwargs):
+        """
+        Lists all UserMini instances.
+
+        Provides a list of all UserMini instances available in the database, serialized using the UserMiniSerializer.
+        Accessible only by users with admin privileges.
+
+        Parameters:
+            request (Request): The incoming HTTP request.
+            *args: Variable length argument list.
+            **kwargs: Arbitrary keyword arguments.
+
+        Returns:
+            Response: The list of UserMini instances serialized data with HTTP status code 200 (OK).
+        """
+        return super().list(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Update a UserMini instance",
+        description="Allows administrators to update details of a specific UserMini instance identified by its primary key. The request must contain the data to be updated, validated against the UserToApprove serializer.",
+        request={
+            'multipart/form-data': {
+                    'type': 'object',
+                    'properties': {
+                        'is_approved': {
+                            'type': 'boolean',
+                        },
+                    }
+            }
+        },
+        responses={
+            200: OpenApiResponse(response=UserToApprove, description="Successful update"),
+            400: OpenApiResponse(description="Bad Request - Invalid data provided"),
+            404: OpenApiResponse(description="Not Found - UserMini instance not found"),
+            500: OpenApiResponse(description="Internal Server Error - Unexpected error occurred")
+        },
+        tags=["Admin", "User Management"],
+        methods=['PUT'],
+    )
+    def update(self, request, pk, *args, **kwargs):
+        """
+        Updates a specific UserMini instance.
+
+        Allows administrators to update details of a specific UserMini instance identified by its primary key (pk).
+        The updated information must be provided in the request data, and is validated against the UserToApprove serializer.
+
+        Parameters:
+            request (Request): The incoming HTTP request containing the data to update.
+            pk (int): The primary key of the UserMini instance to update.
+            *args: Variable length argument list.
+            **kwargs: Arbitrary keyword arguments.
+
+        Returns:
+            Response: The updated UserMini instance serialized data with HTTP status code 200 (OK) if successful.
+                      An appropriate error message and HTTP status code otherwise, depending on the type of error encountered.
+
+        Raises:
+            ValidationError: If the provided data does not pass validation checks.
+            UserMini.DoesNotExist: If no UserMini instance is found with the provided pk.
+            Exception: For any other unexpected errors during the update process.
+        """
+        try:
+            instance = UserMini.objects.get(pk=pk)
+            serializer = UserToApprove(
+                instance, data=request.data)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except ValidationError:
+            return Response({'message': 'Поганий запит'}, status=status.HTTP_400_BAD_REQUEST)
+        except UserMini.DoesNotExist:
+            return Response({'message': 'Користувач не знайдений'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'message': f'Помилка {e}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
