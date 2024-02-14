@@ -1,23 +1,21 @@
-from rest_framework import mixins, status
+from rest_framework import mixins, status, response, viewsets
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from api.models import IsApprovedUser
-from rest_framework.response import Response
-from .serializer import UserCallBack, Notice, NoticeUpdateSerializer
-from .models import CallbackForm
-from rest_framework.viewsets import GenericViewSet
 from django.core.exceptions import ValidationError
 from drf_spectacular.utils import extend_schema
+from .models import CallbackForm
+from .serializer import UserCallBack, Notice, NoticeUpdateSerializer
 # Create your views here.
 
 
-class CallBackPost(mixins.CreateModelMixin, GenericViewSet):
+class CallBackPost(mixins.CreateModelMixin, viewsets.GenericViewSet):
     """
     A viewset for creating callback posts from users. This viewset allows any user to submit
     callback requests with their name, phone number, optional comment, and the ID of the dog
     they are interested in.
     """
     permission_classes = [AllowAny]
-    queryset = CallbackForm.objects.all()
+    queryset = CallbackForm
     serializer_class = UserCallBack
 
     @extend_schema(
@@ -27,20 +25,12 @@ class CallBackPost(mixins.CreateModelMixin, GenericViewSet):
             'multipart/form-data': {
                     'type': 'object',
                     'properties': {
-                        'name': {
-                            'type': 'string',
-                        },
-                        'phone_number': {
-                            'type': 'string',
-                        },
-                        'comment': {
-                            'type': 'string',
-                        },
-                        'id_dog': {
-                            'type': 'integer',
-                        }
+                        'name': {'type': 'string'},
+                        'phone_number': {'type': 'string'},
+                        'comment': {'type': 'string'},
+                        'id_dog': {'type': 'integer'}
                     },
-                'required': ['name', 'phone_number', 'dog_id'],
+                'required': ['name', 'phone_number', 'id_dog'],
             }
         },
         responses={200: Notice, 400: 'Bad request',
@@ -55,16 +45,16 @@ class CallBackPost(mixins.CreateModelMixin, GenericViewSet):
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_200_OK, headers=headers)
+        return response.Response(serializer.data, status=status.HTTP_200_OK, headers=headers)
 
 
-class NotificationAdmin(mixins.ListModelMixin, mixins.UpdateModelMixin, GenericViewSet):
+class NotificationAdmin(mixins.ListModelMixin, mixins.UpdateModelMixin, viewsets.GenericViewSet):
     """
     A viewset for admin users to list and update notifications. Access is restricted to authenticated
     and approved users only. Supports listing all notifications and updating the status of individual notifications.
     """
     permission_classes = [IsAuthenticated, IsApprovedUser]
-    queryset = CallbackForm.objects.all()
+    queryset = CallbackForm
     serializer_class = Notice
 
     @extend_schema(
@@ -101,7 +91,7 @@ class NotificationAdmin(mixins.ListModelMixin, mixins.UpdateModelMixin, GenericV
         responses={200: Notice, 400: 'Bad request',
                    500: 'Internal server error'}
     )
-    def update(self, request, pk, *args, **kwargs):
+    def update(self, request, pk):
         """
         Updates the status of a notification identified by its primary key. Validates the request data
         and applies the updates if valid. Returns the updated notification data on success.
@@ -112,10 +102,10 @@ class NotificationAdmin(mixins.ListModelMixin, mixins.UpdateModelMixin, GenericV
                 instance, data=request.data)
             serializer.is_valid(raise_exception=True)
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            return response.Response(serializer.data, status=status.HTTP_200_OK)
         except ValidationError:
-            return Response({'message': 'Поганий запит - недійсні дані'}, status=status.HTTP_400_BAD_REQUEST)
+            return response.Response({'message': 'Поганий запит - недійсні дані'}, status=status.HTTP_400_BAD_REQUEST)
         except CallbackForm.DoesNotExist:
-            return Response({'message': 'Помилка - не знайдено'}, status=status.HTTP_404_NOT_FOUND)
+            return response.Response({'message': 'Помилка - не знайдено'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
-            return Response({'message': f'Помилка {e}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return response.Response({'message': f'Помилка {e}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

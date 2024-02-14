@@ -1,4 +1,3 @@
-from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from about.models import AboutModel
@@ -10,8 +9,7 @@ from backblaze.models import FileModel
 from backblaze.serializer import FileSerializer
 from rest_framework.viewsets import GenericViewSet
 from rest_framework import mixins
-from drf_spectacular.utils import extend_schema, extend_schema_field, OpenApiParameter, OpenApiExample
-from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema
 from rest_framework.validators import ValidationError
 from api.models import IsApprovedUser
 import json

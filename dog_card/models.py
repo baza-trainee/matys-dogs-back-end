@@ -9,12 +9,20 @@ class DogCardModel(models.Model):
     name = models.CharField(max_length=100)
     ready_for_adoption = models.BooleanField(default=False)
     gender = models.CharField(max_length=10, choices=[
-                              ("хлопчик", "хлопчик"), ("дівчинка", "дівчинка"), ('boy', 'boy'), ('girl', 'girl')])
+                              ("хлопчик", "хлопчик"),
+                              ("дівчинка", "дівчинка"),
+                              ('boy', 'boy'),
+                              ('girl', 'girl')])
     age = models.CharField(max_length=20)
     sterilization = models.BooleanField(default=False)
     vaccination_parasite_treatment = models.BooleanField(default=False)
     size = models.CharField(max_length=10, choices=[(
-        "маленький", "маленький"), ("середній", "середній"), ("великий", "великий"), ('small', 'small'), ('medium', 'medium'), ('large', 'large')])
+        "маленький", "маленький"),
+        ("середній", "середній"),
+        ("великий", "великий"),
+        ('small', 'small'),
+        ('medium', 'medium'),
+        ('large', 'large')])
     description = models.TextField()
     photo = models.ForeignKey(FileModel, on_delete=models.CASCADE, limit_choices_to=models.Q(
         category='image'), null=True, blank=False)
