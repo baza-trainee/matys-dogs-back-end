@@ -3,7 +3,6 @@ from rest_framework import permissions
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.conf import settings
 
 
@@ -33,5 +32,7 @@ class IsApprovedUser(permissions.BasePermission):
     message = 'User is not approved.'
 
     def has_permission(self, request, view):
-        # Check if the user is approved
-        return hasattr(request.user, 'usermini') and request.user.usermini.is_approved
+        if request.user.is_superuser:
+            return True
+        else:
+            return hasattr(request.user, 'usermini') and request.user.usermini.is_approved

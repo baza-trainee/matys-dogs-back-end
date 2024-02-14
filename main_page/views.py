@@ -1,26 +1,26 @@
-from django.http import Http404
+# trunk-ignore-all(black)
+import logging
 from rest_framework.response import Response
 from rest_framework import status
-from main_page.models import NewsModel as News, Partners
-from backblaze.utils.b2_utils import converter_to_webP, delete_file_from_backblaze
+from rest_framework.mixins import ListModelMixin, CreateModelMixin, UpdateModelMixin, DestroyModelMixin
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from backblaze.models import FileModel
-from dog_card.models import DogCardModel
+from rest_framework.viewsets import GenericViewSet
 from main_page.serializer import NewsSerializer, NewsTranslationsSerializer, PartnerSerializer
 from dog_card.serializer import DogCardSerializer
-from rest_framework.viewsets import GenericViewSet
-from rest_framework import mixins
+from .models import NewsModel as News, Partners
+from backblaze.utils.b2_utils import converter_to_webP, delete_file_from_backblaze
+from backblaze.models import FileModel
+from dog_card.models import DogCardModel
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from api.models import IsApprovedUser
 from rest_framework.validators import ValidationError
-import logging
 
 logger = logging.getLogger(__name__)
 # Main Page -------------------------------------------------------------------
 
 
-class main_page_view(mixins.ListModelMixin, GenericViewSet):
+class MainPageView(ListModelMixin, GenericViewSet):
     """
     This class represents a view for the main page. It is a subclass of the `mixins.ListModelMixin` and `GenericViewSet` classes.
 
@@ -90,17 +90,20 @@ class main_page_view(mixins.ListModelMixin, GenericViewSet):
             'partners': partners_serializer.data,
             'dog_cards': dog_cards_serializer.data
         }
-        if not response_data['news'] and not response_data['dog_cards'] and not response_data['partners']:
-            raise Http404("No data found")
         return Response(response_data, status=status.HTTP_200_OK)
 
 # News------------------------------------------------------------------
 
 
-class NewsView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.DestroyModelMixin, GenericViewSet):
+class NewsView(ListModelMixin, CreateModelMixin, UpdateModelMixin,
+               DestroyModelMixin,
+               GenericViewSet
+               ):
     """
-    A viewset for listing, creating, updating, and deleting news items. It supports photo uploads for news items,
-    with special handling for converting uploaded photos to webP format and cleaning up resources on updates or deletion.
+    A viewset for listing, creating, updating, and deleting news items.
+    It supports photo uploads for news items,with special handling for
+    converting uploaded photos to webP format and cleaning up resources
+    on updates or deletion.
     """
     permission_classes = [IsAuthenticated, IsApprovedUser]
     queryset = News.objects.all()
@@ -227,7 +230,7 @@ class NewsView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateMode
             400: {'description': 'Invalid data provided.'}
         }
     )
-    def create(self, request, *args, **kwargs):
+    def create(self, request):
         """
         Creates a new news item with optional photo upload. The photo, if provided, is processed and converted
         to webP format using the handle_photo method. This method also enforces a limit on the total number
@@ -379,7 +382,8 @@ class NewsView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateMode
 # Partners-----------------------------------------------------------
 
 
-class PartnersView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.DestroyModelMixin, GenericViewSet):
+class PartnersView(ListModelMixin, CreateModelMixin, DestroyModelMixin,
+                   GenericViewSet):
     """
     ViewSet for managing partner entries in the system. Allows listing all partners, creating new partner entries,
     and deleting existing ones. Partners can have logos, which are converted to webP format upon upload.
@@ -433,10 +437,14 @@ class PartnersView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.Destro
             'multipart/form-data': {
                 'type': 'object',
                 'properties': {
-                        'logo': {
-                            'type': 'string',
-                            'format': 'binary'
-                        }
+                    'logo': {
+                        'type': 'string',
+                        'format': 'binary'
+                    },
+                    'website': {
+                        'type': 'string',
+                        'format': 'uri'
+                    }
                 }
             }
         },
@@ -460,8 +468,9 @@ class PartnersView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.Destro
             Response: An HttpResponse indicating the outcome of the create operation, with the newly created partner's
             data on success or an error message on failure.
         """
-        logo = request.FILES.get('logo')
         data = {}
+        logo = request.FILES.get('logo')
+        data['website'] = request.data.get('website')
         try:
             new_file = self.upload_logo(logo=logo)
             if new_file:

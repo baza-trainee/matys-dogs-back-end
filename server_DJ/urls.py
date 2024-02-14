@@ -15,13 +15,11 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.urls import path, include, re_path
-from django.contrib import admin
 from django.conf.urls.static import static
 from django.conf import settings
 from django.views.generic import RedirectView
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 urlpatterns = [
-    path('admin/', admin.site.urls),
     path('', include('api.urls')),
     path('upload/', include('backblaze.urls')),
     path('', include('dog_card.urls')),

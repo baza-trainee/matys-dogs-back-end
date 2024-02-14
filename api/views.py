@@ -5,7 +5,6 @@ from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from rest_framework.response import Response
-from rest_framework.viewsets import ViewSet
 from rest_framework import status, mixins
 from django.contrib.auth.models import User
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -13,12 +12,10 @@ from .models import UserMini
 from django.conf import settings
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework.decorators import action
-from drf_spectacular.utils import extend_schema
 from django.contrib.auth.hashers import make_password
-from drf_spectacular.utils import OpenApiResponse
-from rest_framework.viewsets import GenericViewSet
+from drf_spectacular.utils import OpenApiResponse, extend_schema
+from rest_framework.viewsets import GenericViewSet, ViewSet
 from .serializer import UserMiniSerializer, UserToApprove
-from drf_spectacular.utils import extend_schema
 import json
 import os
 import re

@@ -23,6 +23,7 @@ class NewsModel(models.Model):
 class Partners(models.Model):
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=45)
+    website = models.URLField(max_length=300, null=True, blank=True)
     logo = models.ForeignKey(
         FileModel, on_delete=models.CASCADE, null=True, blank=True)
 
