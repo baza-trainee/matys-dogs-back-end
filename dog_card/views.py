@@ -153,7 +153,7 @@ class DogCardSearch(mixins.ListModelMixin, GenericViewSet):
         if not any([age, size, gender, ready_for_adoption]):
             return DogCardModel.objects.all()
 
-        searched_cards = DogCardModel.objects.filter(query)
+        searched_cards = DogCardModel.objects.filter(query).prefetch_related('photo')
         return searched_cards
 
     @extend_schema(
@@ -263,7 +263,7 @@ class DogCardView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateM
     """
     permission_classes = [IsAuthenticated, IsApprovedUser]
     parser_classes = [MultiPartParser, FormParser]
-    queryset = DogCardModel.objects.all()
+    queryset = DogCardModel.objects.all().prefetch_related('photo')
     serializer_class = DogCardTranslationSerializer
 
     def update_dog_card(self, dog_card, data):

@@ -16,6 +16,7 @@ from drf_spectacular.utils import extend_schema, OpenApiParameter
 from api.models import IsApprovedUser
 from rest_framework.validators import ValidationError
 
+
 logger = logging.getLogger(__name__)
 # Main Page -------------------------------------------------------------------
 
@@ -72,9 +73,10 @@ class MainPageView(ListModelMixin, GenericViewSet):
         Raises:
             Http404: If no data is found, a 404 Not Found response is raised.
         """
-        news_queryset = News.objects.all()[:4]
-        dog_cards_queryset = DogCardModel.objects.all()
-        partners_queryset = Partners.objects.all()
+
+        news_queryset = News.objects.all().prefetch_related('photo')
+        dog_cards_queryset = DogCardModel.objects.all().prefetch_related('photo')
+        partners_queryset = Partners.objects.all().prefetch_related('logo')
 
         # Serialize news and dog cards
         news_serializer = self.serializer_mapping[News](
@@ -106,7 +108,7 @@ class NewsView(ListModelMixin, CreateModelMixin, UpdateModelMixin,
     on updates or deletion.
     """
     permission_classes = [IsAuthenticated, IsApprovedUser]
-    queryset = News.objects.all()
+    queryset = News.objects.all().prefetch_related('photo')
     serializer_class = NewsTranslationsSerializer
 
     def handle_photo(self, photo, news):
@@ -388,7 +390,7 @@ class PartnersView(ListModelMixin, CreateModelMixin, DestroyModelMixin,
     ViewSet for managing partner entries in the system. Allows listing all partners, creating new partner entries,
     and deleting existing ones. Partners can have logos, which are converted to webP format upon upload.
     """
-    queryset = Partners.objects.all()
+    queryset = Partners.objects.all().prefetch_related('logo')
     permission_classes = [IsAuthenticated, IsApprovedUser]
     serializer_class = PartnerSerializer
 

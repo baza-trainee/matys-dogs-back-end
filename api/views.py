@@ -23,8 +23,9 @@ import re
 # Create your views here.
 
 
-class AuthenticationService(ViewSet):
+class AuthenticationService(mixins.CreateModelMixin, mixins.UpdateModelMixin, GenericViewSet):
     permission_classes = [AllowAny]
+    serializer_class = UserMiniSerializer
 
     @staticmethod
     def email_validation(*, email: str):
@@ -55,9 +56,6 @@ class AuthenticationService(ViewSet):
         if password != confirmPassword:
             raise ValidationError({'error': 'Паролі не співпадають'})
 
-    def get_queryset(self):
-        # Return an empty queryset
-        return User.objects.none()
 
     @extend_schema(
         summary='Register user',
