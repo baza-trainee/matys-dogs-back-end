@@ -55,14 +55,12 @@ def read_file(file_obj):
 
 
 def upload_to_backblaze(byte_arr, file_obj):
-    print(f'upload_to_backblaze: { byte_arr.getvalue()}')
     if byte_arr.tell() > 2097152:
         raise ValidationError(
             detail={'error': 'Розмір зображення не повинен перевищувати 2MB'})
     webp_file_name = os.path.splitext(file_obj.name)[0] + '.webp'
     file_info = bucket.upload_bytes(
         byte_arr.getvalue(), file_name=webp_file_name)
-    print(file_info.size)
     webp_image_name = file_info.file_name
     webp_image_id = file_info.id_
     image_url = f'https://{bucket_name}.s3.us-east-005.backblazeb2.com/{webp_image_name}'
