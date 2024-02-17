@@ -55,10 +55,14 @@ def read_file(file_obj):
 
 
 def upload_to_backblaze(byte_arr, file_obj):
+    print(f'upload_to_backblaze: { byte_arr.getvalue()}')
+    if byte_arr.tell() > 2097152:
+        raise ValidationError(
+            detail={'error': 'Розмір зображення не повинен перевищувати 2MB'})
     webp_file_name = os.path.splitext(file_obj.name)[0] + '.webp'
     file_info = bucket.upload_bytes(
         byte_arr.getvalue(), file_name=webp_file_name)
-
+    print(file_info.size)
     webp_image_name = file_info.file_name
     webp_image_id = file_info.id_
     image_url = f'https://{bucket_name}.s3.us-east-005.backblazeb2.com/{webp_image_name}'
@@ -73,20 +77,17 @@ def converter_to_webP(file_obj):
         image_validation(file_obj)
         image = read_file(file_obj)
         byte_arr = compress_image(image)
-        if byte_arr.tell() > 2097152:
-            raise ValidationError(
-                detail={'error': 'Розмір зображення не повинен перевищувати 2MB'})
-
         return upload_to_backblaze(byte_arr, file_obj)
     except Exception as e:
         raise ValidationError(detail={f"Error converting to webp: {e}"})
 
 
 def resize_image(image, refactor_size, min_dimension=MIN_DIMENSION):
-    if (image.width and image.height) > min_dimension:
+    if image.width > min_dimension and image.height > min_dimension:
         new_width = int(image.width * refactor_size)
         new_height = int(image.height * refactor_size)
-        current_image = current_image.resize((new_width, new_height))
+        image = image.resize((new_width, new_height))
+    return image
 
 # Compress image
 
@@ -97,20 +98,20 @@ def compress_image(image, quality=DEFAULT_QUALITY, lossy_quality=DEFAULT_LOSSY_Q
     if not isinstance(image, Image.Image):
         raise ValidationError(detail={'error': 'Недійсний об’єкт зображення'})
     byte_arr = BytesIO()
-    current_image = image
-    while byte_arr.tell() > target_size and quality >= 10:
+    while byte_arr.tell() < target_size and quality >= 10:
         byte_arr.seek(0)
         byte_arr.truncate(0)
-        current_image.save(byte_arr, format='webp', optimize=True,
-                           quality=quality, progressive=True, lossy=True, lossy_quality=lossy_quality)
+        image.save(byte_arr, format='webp', optimize=True,
+                   quality=quality, progressive=True, lossy=True, lossy_quality=lossy_quality)
 
         if byte_arr.tell() <= target_size:
             break
 
-        current_image = resize_image(current_image, refactor_size)
+        image = resize_image(image, refactor_size)
         quality -= step_quality
         lossy_quality -= step_lossy_quality
         refactor_size *= 0.8
+    byte_arr.seek(0)
     return byte_arr
 
 
