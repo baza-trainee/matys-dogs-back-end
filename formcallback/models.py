@@ -8,7 +8,7 @@ class CallbackForm(models.Model):
     name = models.CharField(max_length=25, null=False)
     phone_number = models.CharField(max_length=20, null=False)
     comment = models.TextField(
-        blank=True, null=True, max_length=200)  # Optional field
+        blank=True, null=True, max_length=100)  # Optional field
     id_dog = models.ForeignKey(
         DogCardModel, on_delete=models.DO_NOTHING, null=False)
 

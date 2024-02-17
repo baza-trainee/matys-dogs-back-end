@@ -21,7 +21,6 @@ from django.views.generic import RedirectView
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 urlpatterns = [
     path('', include('api.urls')),
-    path('upload/', include('backblaze.urls')),
     path('', include('dog_card.urls')),
     path('', include('main_page.urls')),
     path('', include('about.urls')),

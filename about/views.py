@@ -23,7 +23,7 @@ class AboutList(mixins.ListModelMixin, GenericViewSet):
     for retrieving general information about the organization or entity.
     """
     permission_classes = [AllowAny]
-    queryset = AboutModel.objects.all()
+    queryset = AboutModel.objects.all().prefetch_related('images')
     serializer_class = AboutSerializer
 
     @extend_schema(
@@ -56,7 +56,7 @@ class AboutImages(mixins.ListModelMixin, mixins.CreateModelMixin, GenericViewSet
     creating new image entries by uploading and converting images to webP format, and deleting existing images.
     """
     permission_classes = [IsAuthenticated, IsApprovedUser]
-    queryset = AboutModel.objects.all()
+    queryset = AboutModel.objects.all().prefetch_related('images')
     serializer_class = ImagesSerializer
 
     @extend_schema(

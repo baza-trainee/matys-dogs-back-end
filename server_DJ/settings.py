@@ -57,8 +57,8 @@ INSTALLED_APPS = [
     'corsheaders',
 
     'main_page',
-    'dog_card',
     'backblaze',
+    'dog_card',
     'formcallback',
     'api',
     'about'
