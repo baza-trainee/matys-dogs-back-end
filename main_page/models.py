@@ -1,11 +1,13 @@
 from django.db import models
 from backblaze.models import FileModel
+from backblaze.utils.b2_utils import delete_file_from_backblaze
+
 # Create your models here.
 
 
 class NewsManager(models.Manager):
     def get_lastest(self, limit=4):
-        return self.get_queryset().order_by('-post_at', '-update_at')[:limit]
+        return self.get_queryset()[:limit]
 
 
 class NewsModel(models.Model):
@@ -15,10 +17,19 @@ class NewsModel(models.Model):
     update_at = models.DateTimeField(auto_now=True)
     sub_text = models.CharField(max_length=150, null=True)
     url = models.URLField(max_length=300)
-    photo = models.ForeignKey(
-        FileModel, on_delete=models.CASCADE)
+    photo = models.ForeignKey(FileModel, on_delete=models.CASCADE)
 
     objects = NewsManager()
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        MAX_ITEMS = 4
+        if NewsModel.objects.count() > MAX_ITEMS:
+            oldest_news = NewsModel.objects.all().order_by("post_at").first()
+            if oldest_news.photo is not None:
+                delete_file_from_backblaze(oldest_news.photo_id)
+                oldest_news.photo.delete()
+            oldest_news.delete()
 
     def photo_url(self):
         if self.photo:
@@ -26,19 +37,17 @@ class NewsModel(models.Model):
         return None
 
     class Meta:
-        ordering = ['-post_at', '-update_at']
-        
+        ordering = ["-post_at"]
 
 
 class Partners(models.Model):
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=45)
     website = models.URLField(max_length=300, null=True, blank=True)
-    logo = models.ForeignKey(
-        FileModel, on_delete=models.CASCADE, null=True, blank=True)
+    logo = models.ForeignKey(FileModel, on_delete=models.CASCADE, null=True, blank=True)
 
     def logo_url(self):
         return self.logo.url
 
     class Meta:
-        ordering = ['name']
+        ordering = ["name"]

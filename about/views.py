@@ -12,7 +12,6 @@ from rest_framework import mixins
 from drf_spectacular.utils import extend_schema
 from rest_framework.validators import ValidationError
 from api.models import IsApprovedUser
-import json
 
 # get about data
 
