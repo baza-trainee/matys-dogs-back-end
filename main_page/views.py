@@ -74,7 +74,7 @@ class MainPageView(ListModelMixin, GenericViewSet):
             Http404: If no data is found, a 404 Not Found response is raised.
         """
 
-        news_queryset = News.objects.all().prefetch_related('photo')
+        news_queryset = News.objects.get_lastest().prefetch_related('photo')
         dog_cards_queryset = DogCardModel.objects.all().prefetch_related('photo')
         partners_queryset = Partners.objects.all().prefetch_related('logo')
 
@@ -201,19 +201,19 @@ class NewsView(ListModelMixin, CreateModelMixin, UpdateModelMixin,
                     'properties': {
                         'title': {
                             'type': 'string',
-                            'maxLength': 100
+                            'maxLength': 60
                         },
                         'title_en': {
                             'type': 'string',
-                            'maxLength': 100
+                            'maxLength': 60
                         },
                         'sub_text': {
                             'type': 'string',
-                            'maxLength': 100
+                            'maxLength': 150
                         },
                         'sub_text_en': {
                             'type': 'string',
-                            'maxLength': 100
+                            'maxLength': 150
                         },
                         'url': {
                             'type': 'string',
@@ -256,13 +256,6 @@ class NewsView(ListModelMixin, CreateModelMixin, UpdateModelMixin,
                 data=request.data, context={'request': request, 'view': self})
             serilaizer.is_valid(raise_exception=True)
             serilaizer.save()
-
-            if News.objects.count() > 5:
-                old_news = News.objects.last()
-                if old_news.photo is not None:
-                    delete_file_from_backblaze(old_news.photo_id)
-                    old_news.photo.delete()
-                old_news.delete()
 
             return Response({'massage': 'news was created', 'news': serilaizer.data
                              }, status=status.HTTP_201_CREATED)

@@ -54,7 +54,7 @@ class NotificationAdmin(mixins.ListModelMixin, mixins.UpdateModelMixin, viewsets
     and approved users only. Supports listing all notifications and updating the status of individual notifications.
     """
     permission_classes = [IsAuthenticated, IsApprovedUser]
-    queryset = CallbackForm
+    queryset = CallbackForm.objects.all()
     serializer_class = Notice
 
     @extend_schema(
