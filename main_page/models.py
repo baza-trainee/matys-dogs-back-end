@@ -15,7 +15,7 @@ class NewsModel(models.Model):
     title = models.CharField(max_length=60, blank=False)
     post_at = models.DateTimeField(auto_now_add=True)
     update_at = models.DateTimeField(auto_now=True)
-    sub_text = models.CharField(max_length=150, null=True)
+    sub_text = models.CharField(max_length=150, null=True, blank=False)
     url = models.URLField(max_length=300)
     photo = models.ForeignKey(FileModel, on_delete=models.CASCADE)
 
