@@ -6,7 +6,7 @@ from backblaze.models import FileModel
 
 class DogCardModel(models.Model):
     id = models.AutoField(primary_key=True)
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=25)
     ready_for_adoption = models.BooleanField(default=False)
     gender = models.CharField(max_length=10, choices=[
                               ("хлопчик", "хлопчик"),

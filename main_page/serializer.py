@@ -1,8 +1,8 @@
 from rest_framework.serializers import ModelSerializer
 from main_page.models import NewsModel as News, Partners
 from backblaze.serializer import FileSerializer
+from rest_framework.exceptions import ValidationError
 
-# Serializers define the API representation.
 
 
 class NewsSerializer(ModelSerializer):
@@ -10,8 +10,7 @@ class NewsSerializer(ModelSerializer):
 
     class Meta:
         model = News
-        fields = ('id', 'title', 'sub_text', 'post_at',
-                  'update_at', 'url', 'photo')
+        fields = ("id", "title", "sub_text", "post_at", "update_at", "url", "photo")
 
 
 class NewsTranslationsSerializer(ModelSerializer):
@@ -19,40 +18,52 @@ class NewsTranslationsSerializer(ModelSerializer):
 
     class Meta:
         model = News
-        fields = ('id',
-                  'title',
-                  'title_en',
-                  'sub_text',
-                  'sub_text_en',
-                  'post_at',
-                  'update_at',
-                  'url',
-                  'photo')
+        fields = (
+            "id",
+            "title",
+            "title_en",
+            "sub_text",
+            "sub_text_en",
+            "post_at",
+            "update_at",
+            "url",
+            "photo",
+        )
+
+    def validate_fields(self, validated_data):
+        title, title_en = validated_data["title"], validated_data["title_en"]
+        sub_text, sub_text_en = (
+            validated_data["sub_text"],
+            validated_data["sub_text_en"],
+        )
+        if len(title) > 60 or len(title_en) > 60:
+            raise ValidationError("Довжина поля title повинна бути менше 60 символів")
+        if len(sub_text) > 150 or len(sub_text_en) > 150:
+            raise ValidationError(
+                "Довжина поля sub_text повинна бути менше 150 символів"
+            )
 
     def create(self, validated_data):
-        photo_data = self.context['request'].FILES.get('photo', None)
+        photo_data = self.context["request"].FILES.get("photo", None)
         news = News.objects.create(**validated_data)
         if photo_data:
-            photo_obj = self.context['view'].handle_photo(
-                photo_data, None)
+            photo_obj = self.context["view"].handle_photo(photo_data, None)
             if photo_obj:
                 news.photo = photo_obj
                 news.save()
         return news
 
     def update(self, instance, validated_data):
-        photo_data = self.context['request'].FILES.get('photo', None)
+        photo_data = self.context["request"].FILES.get("photo", None)
         news = super().update(instance, validated_data)
         if photo_data:
-            photo_obj = self.context['view'].handle_photo(
-                photo_data, news)
+            photo_obj = self.context["view"].handle_photo(photo_data, news)
             if photo_obj:
                 news.photo = photo_obj
                 news.save()
             return news
 
 
-# Serializers define the API representation.
 
 
 class PartnerSerializer(ModelSerializer):
@@ -60,4 +71,4 @@ class PartnerSerializer(ModelSerializer):
 
     class Meta:
         model = Partners
-        fields = ('id', 'name', 'logo', 'website')
+        fields = ("id", "name", "logo", "website")

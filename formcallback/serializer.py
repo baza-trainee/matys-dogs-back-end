@@ -15,20 +15,20 @@ class UserCallBack(ModelSerializer):
 
         name = validated_data["name"]
         phone_number = validated_data["phone_number"]
-        # Validate minimum length
+        comment = validated_data["comment"]
         if len(name) < 2:
             raise ValidationError("Введіть щонайменше 2 символи")
-        # Validate allowed characters (latin, cyrillic, space, dash, apostrophe)
-        if not re.match(r"^[a-zA-Zа-яА-ЯёЁіІїЇґҐєЄ\'\-\s]+$", name):
+        if not re.match(r"^[a-zA-Zа-яА-ЯёЁіІїЇґҐєЄ\'`’ʼ\-\s]+$", name):
             raise ValidationError(
                 "Дозволена латиниця, кирилиця, пробіл, дефіс, апостроф"
             )
-
         phone_pattern = re.compile(
             r"^(?:\+3\s?8\s?)?(?:\(0\d{2}\)|0\d{2})\s?\d{3}[-\s]?\d{2}[-\s]?\d{2}$"
         )
         if not phone_pattern.match(phone_number):
             raise ValidationError("Введіть коректний номер мобільного")
+        if len(comment) > 300:
+            raise ValidationError("Коментар занадто довгий")
 
 
 class Notice(ModelSerializer):
