@@ -21,18 +21,19 @@ class AboutList(mixins.ListModelMixin, GenericViewSet):
     A viewset for listing the about data from the AboutModel. This class provides an endpoint
     for retrieving general information about the organization or entity.
     """
+
     permission_classes = [AllowAny]
-    queryset = AboutModel.objects.all().prefetch_related('images')
+    queryset = AboutModel.objects.all().prefetch_related("images")
     serializer_class = AboutSerializer
 
     @extend_schema(
-        summary='Retrieve about data',
+        summary="Retrieve about data",
         description="Retrieve about data",
         responses={
             200: AboutSerializer(many=True),
-        }
+        },
     )
-    def list(self, request):
+    def list(self, request, *args, **kwargs):
         """
         Retrieves about data from the AboutModel. This method provides a way to fetch and serialize
         about data, making it available through a GET request.
@@ -43,9 +44,7 @@ class AboutList(mixins.ListModelMixin, GenericViewSet):
         Returns:
             Response: Serialized about data encapsulated within a Response object, including HTTP status.
         """
-        about_data = self.get_queryset()
-        serializer = self.get_serializer(about_data, many=True)
-        return Response({'about_data': serializer.data}, status=status.HTTP_200_OK)
+        return super().list(request, *args, **kwargs)
 
 
 # About Images
@@ -54,14 +53,15 @@ class AboutImages(mixins.ListModelMixin, mixins.CreateModelMixin, GenericViewSet
     A viewset for managing image data related to the AboutModel. It supports listing all images,
     creating new image entries by uploading and converting images to webP format, and deleting existing images.
     """
+
     permission_classes = [IsAuthenticated, IsApprovedUser]
-    queryset = AboutModel.objects.all().prefetch_related('images')
+    queryset = AboutModel.objects.all().prefetch_related("images")
     serializer_class = ImagesSerializer
 
     @extend_schema(
-        summary='List all images in AboutModel',
+        summary="List all images in AboutModel",
         description="List all images in AboutModel",
-        responses={200: ImagesSerializer(many=True)}
+        responses={200: ImagesSerializer(many=True)},
     )
     def list(self, request, *args, **kwargs):
         """
@@ -79,26 +79,21 @@ class AboutImages(mixins.ListModelMixin, mixins.CreateModelMixin, GenericViewSet
         return super().list(request, *args, **kwargs)
 
     @extend_schema(
-        summary='Upload images to AboutModel',
+        summary="Upload images to AboutModel",
         description="Uploads multiple images to AboutModel, automatically converting them to webP format. Supports bulk upload.",
         request={
-            'multipart/form-data': {
-                    'type': 'object',
-                    'properties': {
-                        'images': {
-                            'type': 'string',
-                            'format': 'binary'
-                        }
-                    }
+            "multipart/form-data": {
+                "type": "object",
+                "properties": {"images": {"type": "string", "format": "binary"}},
             }
         },
         responses={
             201: ImagesSerializer,
-            400: 'Bad request',
-        }
+            400: "Bad request",
+        },
     )
     def create(self, request):
-        """ 
+        """
         Creates a new image entry or entries in the AboutModel by uploading images. Uploaded images are
         automatically converted to webP format. Supports bulk upload.
 
@@ -107,39 +102,39 @@ class AboutImages(mixins.ListModelMixin, mixins.CreateModelMixin, GenericViewSet
 
         Returns:
             Response: An HttpResponse indicating the outcome of the create operation, including the data
-            of the created image entries on success or an error message on failure.
+            of the created image entry on success or an error message on failure.
         """
         try:
-            images = request.FILES.getlist('images')
-            created_files = []
-            if not images:
-                return Response({'message': 'No images provided'}, status=status.HTTP_400_BAD_REQUEST)
-
+            images = request.FILES.get("images")
             about = AboutModel.objects.filter(id=2).first()
 
-            for image in images:
-                webp_image_name, webp_image_id, image_url = converter_to_webP(
-                    image)
-                file_model = FileModel.objects.create(
-                    id=webp_image_id,
-                    name=webp_image_name,
-                    url=image_url,
-                    category='image'
+            if images is None:
+                return Response(
+                    {"message": "Image not found"}, status=status.HTTP_400_BAD_REQUEST
                 )
-                about.images.add(file_model)
-                created_files.append(file_model)
 
-            serializer = FileSerializer(created_files, many=True)
+            webp_image_name, webp_image_id, image_url = converter_to_webP(images)
+            file_model = FileModel.objects.create(
+                id=webp_image_id,
+                name=webp_image_name,
+                url=image_url,
+                category="image",
+            )
+            about.images.add(file_model)
+            serializer = FileSerializer(file_model, many=False)
+
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         except ValidationError as e:
-            return Response({'message': f'{str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"message": f"{str(e)}"}, status=status.HTTP_400_BAD_REQUEST
+            )
 
     @extend_schema(
-        summary='Delete an image from AboutModel',
+        summary="Delete an image from AboutModel",
         description="Delete an image from AboutModel",
-        responses={200: 'Зображення видалено', 404: 'Файл не знайдено'}
+        responses={200: "Зображення видалено", 404: "Файл не знайдено"},
     )
-    def destroy(self, request, pk):
+    def destroy(self, pk):
         """
         Deletes an image entry from the AboutModel by its primary key (pk). This also involves removing
         the image from the associated AboutModel instance and deleting the image file.
@@ -156,11 +151,16 @@ class AboutImages(mixins.ListModelMixin, mixins.CreateModelMixin, GenericViewSet
             file = FileModel.objects.get(pk=pk)
             file.delete()
             about.images.remove(pk)
-            return Response({'message': 'Image deleted'}, status=status.HTTP_200_OK)
+            return Response({"message": "Image deleted"}, status=status.HTTP_200_OK)
         except FileModel.DoesNotExist:
-            return Response({'message': 'File not found'}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"message": "File not found"}, status=status.HTTP_404_NOT_FOUND
+            )
         except Exception as e:
-            return Response({'message': f'Unexpected error occurred: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {"message": f"Unexpected error occurred: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
 
 # Employment data
@@ -169,17 +169,18 @@ class AboutEmployment(mixins.ListModelMixin, mixins.CreateModelMixin, GenericVie
     A viewset for managing employment data related to the AboutModel. It provides endpoints for
     retrieving and updating employment-related information.
     """
+
     permission_classes = [IsAuthenticated, IsApprovedUser]
     queryset = AboutModel.objects.all()
     serializer_class = EmploymentSerializer
 
     @extend_schema(
-        summary='Get employment data from AboutModel',
+        summary="Get employment data from AboutModel",
         description="Get employment data from AboutModel",
         request=EmploymentSerializer,
         responses={
             200: EmploymentSerializer,
-        }
+        },
     )
     def list(self, request, *args, **kwargs):
         """
@@ -199,14 +200,14 @@ class AboutEmployment(mixins.ListModelMixin, mixins.CreateModelMixin, GenericVie
     # Update employment data
 
     @extend_schema(
-        summary='Update employment data in AboutModel',
+        summary="Update employment data in AboutModel",
         description="Update employment data in AboutModel",
         request=EmploymentSerializer,
         responses={
             200: EmploymentSerializer,
-            400: {'description': 'Поганий запит - недійсні дані'},
-            500: {'description': 'Внутрішня помилка сервера'}
-        }
+            400: {"description": "Поганий запит - недійсні дані"},
+            500: {"description": "Внутрішня помилка сервера"},
+        },
     )
     def update(self, request):
         """
@@ -227,6 +228,12 @@ class AboutEmployment(mixins.ListModelMixin, mixins.CreateModelMixin, GenericVie
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         except ValidationError:
-            return Response({'message': 'Поганий запит - недійсні дані'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"message": "Поганий запит - недійсні дані"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         except Exception as e:
-            return Response({'message': f'Помилка {e}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {"message": f"Помилка {e}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )

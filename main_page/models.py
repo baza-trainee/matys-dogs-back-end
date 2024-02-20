@@ -15,7 +15,7 @@ class NewsModel(models.Model):
     title = models.CharField(max_length=60, blank=False)
     post_at = models.DateTimeField(auto_now_add=True)
     update_at = models.DateTimeField(auto_now=True)
-    sub_text = models.CharField(max_length=150, null=True, blank=False)
+    sub_text = models.CharField(max_length=150, null=False, blank=False)
     url = models.URLField(max_length=300)
     photo = models.ForeignKey(FileModel, on_delete=models.CASCADE)
 
@@ -43,8 +43,8 @@ class NewsModel(models.Model):
 class Partners(models.Model):
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=45)
-    website = models.URLField(max_length=300, null=True, blank=True)
-    logo = models.ForeignKey(FileModel, on_delete=models.CASCADE, null=True, blank=True)
+    website = models.URLField(max_length=300, blank=False, null=False)
+    logo = models.ForeignKey(FileModel, on_delete=models.CASCADE, null=False, blank=True)
 
     def logo_url(self):
         return self.logo.url

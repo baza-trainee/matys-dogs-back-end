@@ -448,7 +448,7 @@ class PartnersView(ListModelMixin, CreateModelMixin, DestroyModelMixin,
             400: {'description': 'Поганий запит - недійсні дані'},
         }
     )
-    def create(self, request, *args, **kwargs):
+    def create(self, request):
         """
         Creates a new partner entry in the system. This process may include uploading and converting a logo
         to webP format if a logo file is provided in the request. The new partner, including the converted logo,

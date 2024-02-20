@@ -1,9 +1,7 @@
-# Create your models here.
 from rest_framework import permissions
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.conf import settings
 
 
 class CustomUser(User):

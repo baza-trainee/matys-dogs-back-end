@@ -92,7 +92,7 @@ def resize_image(image, refactor_size, min_dimension=MIN_DIMENSION):
 
 def compress_image(image, quality=DEFAULT_QUALITY, lossy_quality=DEFAULT_LOSSY_QUALITY,
                    step_quality=QUALITY_STEP, step_lossy_quality=LOSSY_QUALITY_STEP,
-                   target_size=TARGET_SIZE):
+                   target_size=TARGET_SIZE, refactor_size=0.8):
     if not isinstance(image, Image.Image):
         raise ValidationError(detail={'error': 'Недійсний об’єкт зображення'})
     byte_arr = BytesIO()
