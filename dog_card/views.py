@@ -13,6 +13,7 @@ from backblaze.utils.validation import image_validation
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema, OpenApiParameter, inline_serializer
 from rest_framework.parsers import MultiPartParser, FormParser
+
 # Create your views here.
 
 
@@ -21,13 +22,14 @@ class DogCardSearch(mixins.ListModelMixin, GenericViewSet):
     A viewset that provides list operations for searching DogCardModel instances
     based on age, size, gender, and adoption status.
     """
+
     permission_classes = [AllowAny]
 
     def age_years(self, *, lower_bound, upper_bound):
         """
         Generates a list of age descriptions in years from lower_bound to upper_bound.
 
-        The method accounts for language specifics related to age descriptions, 
+        The method accounts for language specifics related to age descriptions,
         providing appropriate suffixes based on the age.
 
         Args:
@@ -53,17 +55,20 @@ class DogCardSearch(mixins.ListModelMixin, GenericViewSet):
                 year_str = "років"
 
             # Format age with appropriate decimal places and replace dot with comma for local convention
-            year_num = f"{int(age_years)}" if age_years % 1 == 0 else f"{age_years:.1f}".replace(
-                ".", ",")
+            year_num = (
+                f"{int(age_years)}"
+                if age_years % 1 == 0
+                else f"{age_years:.1f}".replace(".", ",")
+            )
 
             # Add the formatted age description to the list
-            possible_ages.append(f'{year_num} {year_str}')
+            possible_ages.append(f"{year_num} {year_str}")
 
             # Increment age_years by 0.5 to consider half-year increments
             age_years += 0.5
         return possible_ages
 
-    def age_in_months(self, *,  lower_bound, upper_bound):
+    def age_in_months(self, *, lower_bound, upper_bound):
         """
         Generates a list of age strings in months and years between the specified bounds.
 
@@ -80,19 +85,21 @@ class DogCardSearch(mixins.ListModelMixin, GenericViewSet):
         while age_months <= upper_bound:
             # Determine the correct suffix based on the number of months.
             if age_months in [1, 2, 3, 4]:
-                month_str = "місяць" if age_months == 1 else 'місяці'
+                month_str = "місяць" if age_months == 1 else "місяці"
             else:
                 month_str = "місяців"
 
                 # Format the age string correctly for both whole numbers and decimals.
-                age_str = f"{age_months:.1f}" if age_months % 1 else f"{int(age_months)}"
-                possible_ages.append(f'{age_str} {month_str}')
+                age_str = (
+                    f"{age_months:.1f}" if age_months % 1 else f"{int(age_months)}"
+                )
+                possible_ages.append(f"{age_str} {month_str}")
 
             # Increment by 0.5 months until reaching the upper bound.
             age_months += 0.5
         # Check if exactly 12 months should be translated to "1 рік" and add if not already included.
-        if upper_bound >= 12 and '1 рік' not in possible_ages:
-            possible_ages.append('1 рік')
+        if upper_bound >= 12 and "1 рік" not in possible_ages:
+            possible_ages.append("1 рік")
         return possible_ages
 
     def get_age_range(self, *, age_category):
@@ -110,12 +117,12 @@ class DogCardSearch(mixins.ListModelMixin, GenericViewSet):
                 The descriptions are in months for puppies and in years for older dogs.
         """
         age_ranges = {
-            'щеня': (0, 12),
-            'puppy': (0, 12),
-            'молода собака': (12, 36),
-            'young dog': (12, 36),
-            'доросла собака': (42, 240),
-            'adult dog': (42, 240),
+            "щеня": (0, 12),
+            "puppy": (0, 12),
+            "молода собака": (12, 36),
+            "young dog": (12, 36),
+            "доросла собака": (42, 240),
+            "adult dog": (42, 240),
         }
 
         lower_bound, upper_bound = age_ranges.get(age_category, (0, 0))
@@ -153,11 +160,11 @@ class DogCardSearch(mixins.ListModelMixin, GenericViewSet):
         if not any([age, size, gender, ready_for_adoption]):
             return DogCardModel.objects.all()
 
-        searched_cards = DogCardModel.objects.filter(query).prefetch_related('photo')
+        searched_cards = DogCardModel.objects.filter(query).prefetch_related("photo")
         return searched_cards
 
     @extend_schema(
-        summary='Search dog cards based on various criteria',
+        summary="Search dog cards based on various criteria",
         description="Performs a search across dog cards using filters like age, size, gender, and adoption status.",
         parameters=[
             OpenApiParameter(
@@ -169,50 +176,38 @@ class DogCardSearch(mixins.ListModelMixin, GenericViewSet):
                 enum=["en", "uk"],
             ),
             OpenApiParameter(
-                name='age',
+                name="age",
                 description='Filter by age category. Supported values are "puppy", "young dog", "adult dog" and their Ukrainian equivalents.',
                 required=False,
                 type=OpenApiTypes.STR,
                 location=OpenApiParameter.QUERY,
                 enum=[
-                    'щеня',
-                    'молода собака',
-                    'доросла собака',
-                    'puppy',
-                    'young dog',
-                    'adult dog'
-                ]
+                    "щеня",
+                    "молода собака",
+                    "доросла собака",
+                    "puppy",
+                    "young dog",
+                    "adult dog",
+                ],
             ),
             OpenApiParameter(
-                name='size',
+                name="size",
                 description='Filter by size category. Supported values are "small", "medium", "large" and their Ukrainian equivalents.',
                 required=False,
                 type=OpenApiTypes.STR,
                 location=OpenApiParameter.QUERY,
-                enum=[
-                     'small',
-                    'medium',
-                    'large',
-                    'маленький',
-                    'середній',
-                    'великий'
-                ]
+                enum=["small", "medium", "large", "маленький", "середній", "великий"],
             ),
             OpenApiParameter(
-                name='gender',
+                name="gender",
                 description='Filter by gender. Supported values are "boy", "girl" and their Ukrainian equivalents.',
                 required=False,
                 type=OpenApiTypes.STR,
                 location=OpenApiParameter.QUERY,
-                enum=[
-                    'boy',
-                    'girl',
-                    'хлопчик',
-                    'дівчинка'
-                ]
+                enum=["boy", "girl", "хлопчик", "дівчинка"],
             ),
             OpenApiParameter(
-                name='ready_for_adoption',
+                name="ready_for_adoption",
                 description='Filter by adoption readiness status. Expected boolean values "true" or "false".',
                 required=False,
                 type=OpenApiTypes.BOOL,
@@ -221,36 +216,50 @@ class DogCardSearch(mixins.ListModelMixin, GenericViewSet):
         ],
         responses={
             200: inline_serializer(
-                name='DogCardListResponse',
-                fields={'cards': DogCardSerializer(many=True)}
+                name="DogCardListResponse",
+                fields={"cards": DogCardSerializer(many=True)},
             ),
-            400: {'description': 'No cards found matching the criteria.'},
-            500: {'description': 'Internal Server Error'}
-        }
+            400: {"description": "No cards found matching the criteria."},
+            500: {"description": "Internal Server Error"},
+        },
     )
     def list(self, request):
         """
         Overrides the default list method to incorporate search functionality based on query parameters.
         """
         try:
-            search_age = request.GET.get('age', '')
-            search_size = request.GET.get('size', '')
-            search_gender = request.GET.get('gender', '')
-            serach_ready_for_adoption = request.GET.get(
-                'ready_for_adoption', '')
+            search_age = request.GET.get("age", "")
+            search_size = request.GET.get("size", "")
+            search_gender = request.GET.get("gender", "")
+            serach_ready_for_adoption = request.GET.get("ready_for_adoption", "")
 
             searched_dogs_cards = self.search_dogs_cards(
-                age=search_age, size=search_size, gender=search_gender, ready_for_adoption=serach_ready_for_adoption)
+                age=search_age,
+                size=search_size,
+                gender=search_gender,
+                ready_for_adoption=serach_ready_for_adoption,
+            )
             if searched_dogs_cards:
                 serializers = DogCardSerializer(searched_dogs_cards, many=True)
-                return Response({'Cards': serializers.data})
+                return Response({"Cards": serializers.data})
             else:
-                return Response({'message': 'Карт не знайдено'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response(
+                    {"message": "Карт не знайдено"}, status=status.HTTP_400_BAD_REQUEST
+                )
         except ValidationError as e:
-            return Response({'message': f'Помилка {e}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {"message": f"Помилка {e}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
 
-class DogCardView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.DestroyModelMixin, GenericViewSet):
+class DogCardView(
+    mixins.ListModelMixin,
+    mixins.CreateModelMixin,
+    mixins.UpdateModelMixin,
+    mixins.DestroyModelMixin,
+    GenericViewSet,
+):
     """
     ViewSet for handling CRUD operations for DogCardModel instances.
     Allows listing, creating, updating, and deleting dog cards.
@@ -261,9 +270,10 @@ class DogCardView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateM
         queryset: The base queryset for dog card operations.
         serializer_class: The serializer for input and output operations.
     """
+
     permission_classes = [IsAuthenticated, IsApprovedUser]
     parser_classes = [MultiPartParser, FormParser]
-    queryset = DogCardModel.objects.all().prefetch_related('photo')
+    queryset = DogCardModel.objects.all().prefetch_related("photo")
     serializer_class = DogCardTranslationSerializer
 
     def update_dog_card(self, dog_card, data):
@@ -304,26 +314,25 @@ class DogCardView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateM
             dog_card.photo.delete()
             delete_file_from_backblaze(dog_card.photo_id)
 
-        webp_image_name, webp_image_id, image_url = converter_to_webP(
-            photo)
+        webp_image_name, webp_image_id, image_url = converter_to_webP(photo)
         return FileModel.objects.create(
-            id=webp_image_id, name=webp_image_name, url=image_url, category='image'
+            id=webp_image_id, name=webp_image_name, url=image_url, category="image"
         )
 
     @extend_schema(
-        summary='Retrieve a list of all dog cards',
-        description='Provides a list of all available dog cards in the system with detailed information.',
+        summary="Retrieve a list of all dog cards",
+        description="Provides a list of all available dog cards in the system with detailed information.",
         responses={200: DogCardSerializer(many=True)},
         parameters=[
             OpenApiParameter(
-                name='Accept-Language',
+                name="Accept-Language",
                 type=OpenApiTypes.STR,
                 location=OpenApiParameter.HEADER,
                 required=False,
-                description='Specify the language of the content returned. Defaults to English.',
-                enum=['en', 'uk'],
+                description="Specify the language of the content returned. Defaults to English.",
+                enum=["en", "uk"],
             ),
-        ]
+        ],
     )
     def list(self, request, *args, **kwargs):
         """
@@ -334,73 +343,75 @@ class DogCardView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateM
         return super().list(request, *args, **kwargs)
 
     @extend_schema(
-        summary='Create a new dog card',
-        description='Allows the creation of a new dog card with the provided details including an optional photo.',
+        summary="Create a new dog card",
+        description="Allows the creation of a new dog card with the provided details including an optional photo.",
         request={
-            'multipart/form-data': {
-                'type': 'object',
-                'properties': {
-                    'name': {'type': 'string'},
-                    'name_en': {'type': 'string'},
-                    'ready_for_adoption': {'type': 'boolean'},
-                    'gender': {
-                        'type': 'string',
-                        # List of accepted values
-                        'enum': ['хлопчик', 'дівчинка'],
-                        'description': 'Gender of the dog',
+            "multipart/form-data": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "name_en": {"type": "string"},
+                    "ready_for_adoption": {"type": "boolean"},
+                    "gender": {
+                        "type": "string",
+                        "enum": ["хлопчик", "дівчинка"],
+                        "description": "Gender of the dog",
                     },
-                    'gender_en': {
-                        'type': 'string',
-                        # List of accepted values
-                        'enum': ['boy', 'girl'],
-                        'description': 'Gender of the dog',
+                    "gender_en": {
+                        "type": "string",
+                        "enum": ["boy", "girl"],
+                        "description": "Gender of the dog",
                     },
-                    'age': {
-                        'type': 'string',
-                        # List of accepted values
-                        'enum': ['щеня',
-                                 'молода собака',
-                                 'доросла собака',],
-                        'description': 'Age of the dog',
+                    "age": {
+                        "type": "string",
+                        "enum": [
+                            "щеня",
+                            "молода собака",
+                            "доросла собака",
+                        ],
+                        "description": "Age of the dog",
                     },
-                    'age_en': {
-                        'type': 'string',
-                        # List of accepted values
-                        'enum': ['puppy',
-                                 'young dog',
-                                 'adult dog'],
-                        'description': 'Age of the dog',
+                    "age_en": {
+                        "type": "string",
+                        "enum": ["puppy", "young dog", "adult dog"],
+                        "description": "Age of the dog",
                     },
-                    'sterilization': {'type': 'boolean'},
-                    'vaccination_parasite_treatment': {'type': 'boolean'},
-                    'size': {
-                        'type': 'string',
-                        # List of accepted values
-                        'enum': ['маленький',
-                                 'середній',
-                                 'великий'],
-                        'description': 'Size of the dog',
+                    "sterilization": {"type": "boolean"},
+                    "vaccination_parasite_treatment": {"type": "boolean"},
+                    "size": {
+                        "type": "string",
+                        "enum": ["маленький", "середній", "великий"],
+                        "description": "Size of the dog",
                     },
-                    'size_en': {
-                        'type': 'string',
-                        # List of accepted values
-                        'enum': ['small',
-                                 'medium',
-                                 'large',],
-                        'description': 'Size of the dog',
+                    "size_en": {
+                        "type": "string",
+                        "enum": [
+                            "small",
+                            "medium",
+                            "large",
+                        ],
+                        "description": "Size of the dog",
                     },
-                    'description': {'type': 'string'},
-                    'description_en': {'type': 'string'},
-                    'photo': {'type': 'string', 'format': 'binary', 'nullable': True}
+                    "description": {"type": "string"},
+                    "description_en": {"type": "string"},
+                    "photo": {"type": "string", "format": "binary", "nullable": True},
                 },
-                # Add required fields here
-                'required': ['name', 'ready_for_adoption', 'gender', 'age', 'sterilization', 'vaccination_parasite_treatment', 'size', 'description'],
+                "required": [
+                    "name",
+                    "ready_for_adoption",
+                    "gender",
+                    "age",
+                    "sterilization",
+                    "vaccination_parasite_treatment",
+                    "size",
+                    "description",
+                ],
             }
         },
         responses={
             201: DogCardTranslationSerializer,
-            400: 'Bad Request if the input data is invalid.'
-        }
+            400: "Bad Request if the input data is invalid.",
+        },
     )
     def create(self, request, *args, **kwargs):
         """
@@ -408,87 +419,95 @@ class DogCardView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateM
 
         Handles the photo file separately, using the handle_photo method to process it.
         """
-        serilaizer = self.get_serializer(
-            data=request.data, context={'request': request, 'view': self})
-        serilaizer.is_valid(raise_exception=True)
         try:
-
-            self.perform_create(serilaizer)
-            return Response({'message': 'Карта створена', 'new_dogs_card': serilaizer.data}, status=status.HTTP_201_CREATED)
+            serilaizer = self.get_serializer(
+                data=request.data, context={"request": request, "view": self}
+            )
+            serilaizer.is_valid(raise_exception=True)
+            if serilaizer.isvalid():
+                self.perform_create(serilaizer)
+            return Response(
+                {"message": "Карта створена", "new_dogs_card": serilaizer.data},
+                status=status.HTTP_201_CREATED,
+            )
         except ValidationError as e:
-            return Response({'message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            return Response({'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     @extend_schema(
-        summary='Update a dog card',
-        description='Updates the details of an existing dog card identified by the given primary key.',
+        summary="Update a dog card",
+        description="Updates the details of an existing dog card identified by the given primary key.",
         request={
-            'multipart/form-data': {
-                'type': 'object',
-                'properties': {
-                    'name': {'type': 'string'},
-                    'name_en': {'type': 'string'},
-                    'ready_for_adoption': {'type': 'boolean'},
-                    'gender': {
-                        'type': 'string',
-                        # List of accepted values
-                        'enum': ['хлопчик', 'дівчинка'],
-                        'description': 'Gender of the dog',
+            "multipart/form-data": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "name_en": {"type": "string"},
+                    "ready_for_adoption": {"type": "boolean"},
+                    "gender": {
+                        "type": "string",
+                        "enum": ["хлопчик", "дівчинка"],
+                        "description": "Gender of the dog",
                     },
-                    'gender_en': {
-                        'type': 'string',
-                        # List of accepted values
-                        'enum': ['boy', 'girl'],
-                        'description': 'Gender of the dog',
+                    "gender_en": {
+                        "type": "string",
+                        "enum": ["boy", "girl"],
+                        "description": "Gender of the dog",
                     },
-                    'age': {
-                        'type': 'string',
-                        # List of accepted values
-                        'enum': ['щеня',
-                                 'молода собака',
-                                 'доросла собака',],
-                        'description': 'Age of the dog',
+                    "age": {
+                        "type": "string",
+                        "enum": [
+                            "щеня",
+                            "молода собака",
+                            "доросла собака",
+                        ],
+                        "description": "Age of the dog",
                     },
-                    'age_en': {
-                        'type': 'string',
-                        # List of accepted values
-                        'enum': ['puppy',
-                                 'young dog',
-                                 'adult dog'],
-                        'description': 'Age of the dog',
+                    "age_en": {
+                        "type": "string",
+                        "enum": ["puppy", "young dog", "adult dog"],
+                        "description": "Age of the dog",
                     },
-                    'sterilization': {'type': 'boolean'},
-                    'vaccination_parasite_treatment': {'type': 'boolean'},
-                    'size': {
-                        'type': 'string',
-                        # List of accepted values
-                        'enum': ['маленький',
-                                 'середній',
-                                 'великий'],
-                        'description': 'Size of the dog',
+                    "sterilization": {"type": "boolean"},
+                    "vaccination_parasite_treatment": {"type": "boolean"},
+                    "size": {
+                        "type": "string",
+                        "enum": ["маленький", "середній", "великий"],
+                        "description": "Size of the dog",
                     },
-                    'size_en': {
-                        'type': 'string',
-                        # List of accepted values
-                        'enum': ['small',
-                                 'medium',
-                                 'large',],
-                        'description': 'Size of the dog',
+                    "size_en": {
+                        "type": "string",
+                        "enum": [
+                            "small",
+                            "medium",
+                            "large",
+                        ],
+                        "description": "Size of the dog",
                     },
-                    'description': {'type': 'string'},
-                    'description_en': {'type': 'string'},
-                    'photo': {'type': 'string', 'format': 'binary', 'nullable': True}
+                    "description": {"type": "string"},
+                    "description_en": {"type": "string"},
+                    "photo": {"type": "string", "format": "binary", "nullable": True},
                 },
-                # Add required fields here
-                'required': ['name', 'ready_for_adoption', 'gender', 'age', 'sterilization', 'vaccination_parasite_treatment', 'size', 'description'],
+                "required": [
+                    "name",
+                    "ready_for_adoption",
+                    "gender",
+                    "age",
+                    "sterilization",
+                    "vaccination_parasite_treatment",
+                    "size",
+                    "description",
+                ],
             }
         },
         responses={
             200: DogCardTranslationSerializer,
-            404: 'Not Found if the dog card does not exist.',
-            500: 'Internal Server Error for any other unforeseen errors.'
-        }
+            404: "Not Found if the dog card does not exist.",
+            500: "Internal Server Error for any other unforeseen errors.",
+        },
     )
     def update(self, request, pk):
         """
@@ -502,29 +521,37 @@ class DogCardView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateM
         """
         try:
             dog_card = DogCardModel.objects.get(pk=pk)
-            serializer = self.get_serializer(dog_card, data=request.data, context={
-                                             'request': request, 'view': self})
+            serializer = self.get_serializer(
+                dog_card, data=request.data, context={"request": request, "view": self}
+            )
             serializer.is_valid(raise_exception=True)
-
-            self.update_dog_card(dog_card, serializer.validated_data)
-            self.perform_update(serializer=serializer)
-            return Response({'message': 'Карта оновлена', 'updated_dog_card': serializer.data},
-                            status=status.HTTP_200_OK)
+            if serializer.is_valid():
+                self.update_dog_card(dog_card, serializer.validated_data)
+                self.perform_update(serializer=serializer)
+            return Response(
+                {"message": "Карта оновлена", "updated_dog_card": serializer.data},
+                status=status.HTTP_200_OK,
+            )
         except DogCardModel.DoesNotExist:
-            return Response({'message': 'Карта не знайдена'}, status=status.HTTP_404_NOT_FOUND)
-        except Exception as e:  # Catch more specific exceptions if possible
-            return Response({'Error_in_update': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {"message": "Карта не знайдена"}, status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {"Error_in_update": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
     @extend_schema(
-        summary='Delete a dog card',
-        description='Permanently removes a dog card from the system, including its associated photo from external storage.',
+        summary="Delete a dog card",
+        description="Permanently removes a dog card from the system, including its associated photo from external storage.",
         responses={
-            200: 'Successful Deletion if the dog card was found and deleted.',
-            404: 'Not Found if no dog card matches the provided primary key.',
-            500: 'Internal Server Error for any other unforeseen errors.'
-        }
+            200: "Successful Deletion if the dog card was found and deleted.",
+            404: "Not Found if no dog card matches the provided primary key.",
+            500: "Internal Server Error for any other unforeseen errors.",
+        },
     )
-    def destroy(self, request, pk):
+    def destroy(self, pk):
         """
         Deletes a DogCardModel instance along with its associated photo.
 
@@ -536,11 +563,17 @@ class DogCardView(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.UpdateM
         """
         try:
             card = DogCardModel.objects.get(id=pk)
-            delete_file_from_backblaze(card.photo_id)
+            if card.photo:
+                delete_file_from_backblaze(card.photo_id)
             card.photo.delete()
             card.delete()
-            return Response({'message': 'Карта видалена'}, status=status.HTTP_200_OK)
+            return Response({"message": "Карта видалена"}, status=status.HTTP_200_OK)
         except DogCardModel.DoesNotExist:
-            return Response({'message': 'Карти не знайдено'}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"message": "Карти не знайдено"}, status=status.HTTP_404_NOT_FOUND
+            )
         except ValidationError as e:
-            return Response({'message': f'Помилка {e}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {"message": f"Помилка {e}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )

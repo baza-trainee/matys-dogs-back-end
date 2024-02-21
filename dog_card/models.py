@@ -36,7 +36,7 @@ class DogCardModel(models.Model):
         FileModel,
         on_delete=models.CASCADE,
         limit_choices_to=models.Q(category="image"),
-        null=False,
+        null=True,
         blank=False,
     )
 

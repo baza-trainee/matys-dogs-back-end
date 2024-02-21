@@ -2,10 +2,19 @@
 import logging
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.mixins import ListModelMixin, CreateModelMixin, UpdateModelMixin, DestroyModelMixin
+from rest_framework.mixins import (
+    ListModelMixin,
+    CreateModelMixin,
+    UpdateModelMixin,
+    DestroyModelMixin,
+)
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.viewsets import GenericViewSet
-from main_page.serializer import NewsSerializer, NewsTranslationsSerializer, PartnerSerializer
+from main_page.serializer import (
+    NewsSerializer,
+    NewsTranslationsSerializer,
+    PartnerSerializer,
+)
 from dog_card.serializer import DogCardSerializer
 from .models import NewsModel as News, Partners
 from backblaze.utils.b2_utils import converter_to_webP, delete_file_from_backblaze
@@ -41,11 +50,12 @@ class MainPageView(ListModelMixin, GenericViewSet):
             Raises:
                 Http404: If no data is found, a 404 Not Found response is raised.
     """
+
     permission_classes = [AllowAny]
     serializer_mapping = {
         News: NewsSerializer,
         Partners: PartnerSerializer,
-        DogCardModel: DogCardSerializer
+        DogCardModel: DogCardSerializer,
     }
 
     @extend_schema(
@@ -74,41 +84,47 @@ class MainPageView(ListModelMixin, GenericViewSet):
             Http404: If no data is found, a 404 Not Found response is raised.
         """
 
-        news_queryset = News.objects.get_lastest().prefetch_related('photo')
-        dog_cards_queryset = DogCardModel.objects.all().prefetch_related('photo')
-        partners_queryset = Partners.objects.all().prefetch_related('logo')
+        news_queryset = News.objects.get_lastest().prefetch_related("photo")
+        dog_cards_queryset = DogCardModel.objects.all().prefetch_related("photo")
+        partners_queryset = Partners.objects.all().prefetch_related("logo")
 
         # Serialize news and dog cards
-        news_serializer = self.serializer_mapping[News](
-            news_queryset, many=True)
+        news_serializer = self.serializer_mapping[News](news_queryset, many=True)
         dog_cards_serializer = self.serializer_mapping[DogCardModel](
-            dog_cards_queryset, many=True)
+            dog_cards_queryset, many=True
+        )
         partners_serializer = self.serializer_mapping[Partners](
-            partners_queryset, many=True)
+            partners_queryset, many=True
+        )
 
         # Make response data
         response_data = {
-            'news': news_serializer.data,
-            'partners': partners_serializer.data,
-            'dog_cards': dog_cards_serializer.data
+            "news": news_serializer.data,
+            "partners": partners_serializer.data,
+            "dog_cards": dog_cards_serializer.data,
         }
         return Response(response_data, status=status.HTTP_200_OK)
+
 
 # News------------------------------------------------------------------
 
 
-class NewsView(ListModelMixin, CreateModelMixin, UpdateModelMixin,
-               DestroyModelMixin,
-               GenericViewSet
-               ):
+class NewsView(
+    ListModelMixin,
+    CreateModelMixin,
+    UpdateModelMixin,
+    DestroyModelMixin,
+    GenericViewSet,
+):
     """
     A viewset for listing, creating, updating, and deleting news items.
     It supports photo uploads for news items,with special handling for
     converting uploaded photos to webP format and cleaning up resources
     on updates or deletion.
     """
+
     permission_classes = [IsAuthenticated, IsApprovedUser]
-    queryset = News.objects.all().prefetch_related('photo')
+    queryset = News.objects.all().prefetch_related("photo")
     serializer_class = NewsTranslationsSerializer
 
     def handle_photo(self, photo, news):
@@ -129,10 +145,9 @@ class NewsView(ListModelMixin, CreateModelMixin, UpdateModelMixin,
             news.photo.delete()
             delete_file_from_backblaze(news.photo_id)
 
-        webp_image_name, webp_image_id, image_url = converter_to_webP(
-            photo)
+        webp_image_name, webp_image_id, image_url = converter_to_webP(photo)
         return FileModel.objects.create(
-            id=webp_image_id, name=webp_image_name, url=image_url, category='image'
+            id=webp_image_id, name=webp_image_name, url=image_url, category="image"
         )
 
     def perform_create(self, serilaizer):
@@ -159,19 +174,19 @@ class NewsView(ListModelMixin, CreateModelMixin, UpdateModelMixin,
         news.save()
 
     @extend_schema(
-        summary='List News Items',
-        description='Retrieves a list of all news items, providing a paginated response. Supports filtering and searching.',
+        summary="List News Items",
+        description="Retrieves a list of all news items, providing a paginated response. Supports filtering and searching.",
         responses={200: NewsTranslationsSerializer(many=True)},
         parameters=[
             OpenApiParameter(
-                name='Accept-Language',
+                name="Accept-Language",
                 type=OpenApiTypes.STR,
                 location=OpenApiParameter.HEADER,
                 required=False,
-                description='Specify the language of the content returned. Defaults to English.',
-                enum=['en', 'uk'],
+                description="Specify the language of the content returned. Defaults to English.",
+                enum=["en", "uk"],
             ),
-        ]
+        ],
     )
     def list(self, request, *args, **kwargs):
         """
@@ -193,44 +208,26 @@ class NewsView(ListModelMixin, CreateModelMixin, UpdateModelMixin,
 
     # Create news
     @extend_schema(
-        summary='Create a News Item',
-        description='Creates a new news item, optionally including a photo upload. Enforces a limit on the total number of stored news items.',
+        summary="Create a News Item",
+        description="Creates a new news item, optionally including a photo upload. Enforces a limit on the total number of stored news items.",
         request={
-            'multipart/form-data': {
-                    'type': 'object',
-                    'properties': {
-                        'title': {
-                            'type': 'string',
-                            'maxLength': 60
-                        },
-                        'title_en': {
-                            'type': 'string',
-                            'maxLength': 60
-                        },
-                        'sub_text': {
-                            'type': 'string',
-                            'maxLength': 150
-                        },
-                        'sub_text_en': {
-                            'type': 'string',
-                            'maxLength': 150
-                        },
-                        'url': {
-                            'type': 'string',
-                            'format': 'uri'
-                        },
-                        'photo': {
-                            'type': 'string',
-                            'format': 'binary'
-                        }
-                    },
-                'required': ['title',  'sub_text',  'url', 'photo'],
+            "multipart/form-data": {
+                "type": "object",
+                "properties": {
+                    "title": {"type": "string", "maxLength": 60},
+                    "title_en": {"type": "string", "maxLength": 60},
+                    "sub_text": {"type": "string", "maxLength": 150},
+                    "sub_text_en": {"type": "string", "maxLength": 150},
+                    "url": {"type": "string", "format": "uri"},
+                    "photo": {"type": "string", "format": "binary"},
+                },
+                "required": ["title", "sub_text", "url", "photo"],
             }
         },
         responses={
             201: NewsTranslationsSerializer,
-            400: {'description': 'Invalid data provided.'}
-        }
+            400: {"description": "Invalid data provided."},
+        },
     )
     def create(self, request):
         """
@@ -253,54 +250,40 @@ class NewsView(ListModelMixin, CreateModelMixin, UpdateModelMixin,
 
         try:
             serilaizer = self.get_serializer(
-                data=request.data, context={'request': request, 'view': self})
+                data=request.data, context={"request": request, "view": self}
+            )
             serilaizer.is_valid(raise_exception=True)
-            serilaizer.save()
+            if serilaizer.is_valid():
+                serilaizer.save()
 
-            return Response({'massage': 'news was created', 'news': serilaizer.data
-                             }, status=status.HTTP_201_CREATED)
+            return Response(
+                {"massage": "news was created", "news": serilaizer.data},
+                status=status.HTTP_201_CREATED,
+            )
         except ValidationError as e:
-            return Response({'message': e.detail}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"message": e.detail}, status=status.HTTP_400_BAD_REQUEST)
 
     @extend_schema(
-        summary='Update a News Item',
-        description='Updates an existing news item by ID. Allows for modifying content and replacing the photo.',
+        summary="Update a News Item",
+        description="Updates an existing news item by ID. Allows for modifying content and replacing the photo.",
         request={
-            'multipart/form-data': {
-                    'type': 'object',
-                    'properties': {
-                        'title': {
-                            'type': 'string',
-                            'maxLength': 100
-                        },
-                        'title_en': {
-                            'type': 'string',
-                            'maxLength': 100
-                        },
-                        'sub_text': {
-                            'type': 'string',
-                            'maxLength': 300
-                        },
-                        'sub_text_en': {
-                            'type': 'string',
-                            'maxLength': 300
-                        },
-                        'url': {
-                            'type': 'string',
-                            'format': 'uri'
-                        },
-                        'photo': {
-                            'type': 'string',
-                            'format': 'binary'
-                        }
-                    },
-                'required': ['title',  'sub_text',  'url', 'photo'],
+            "multipart/form-data": {
+                "type": "object",
+                "properties": {
+                    "title": {"type": "string", "maxLength": 100},
+                    "title_en": {"type": "string", "maxLength": 100},
+                    "sub_text": {"type": "string", "maxLength": 300},
+                    "sub_text_en": {"type": "string", "maxLength": 300},
+                    "url": {"type": "string", "format": "uri"},
+                    "photo": {"type": "string", "format": "binary"},
+                },
+                "required": ["title", "sub_text", "url", "photo"],
             }
         },
         responses={
             200: NewsTranslationsSerializer,
-            404: {'description': 'News item not found.'},
-            500: {'description': 'Internal server error.'}
+            404: {"description": "News item not found."},
+            500: {"description": "Internal server error."},
         },
     )
     def update(self, request, pk):
@@ -321,26 +304,34 @@ class NewsView(ListModelMixin, CreateModelMixin, UpdateModelMixin,
             news item's data or failure with an appropriate error message.
         """
         news = News.objects.get(pk=pk)
-        serilaizer = self.get_serializer(news, data=request.data, context={
-                                         'request': request, 'view': self})
+        serilaizer = self.get_serializer(
+            news, data=request.data, context={"request": request, "view": self}
+        )
         serilaizer.is_valid(raise_exception=True)
         try:
 
             self.update_news(news, serilaizer.validated_data)
             self.perform_update(serializer=serilaizer)
-            return Response({'message': 'Новини були оновлені'}, status=status.HTTP_200_OK)
+            return Response(
+                {"message": "Новини були оновлені"}, status=status.HTTP_200_OK
+            )
         except News.DoesNotExist:
-            return Response({'message': 'Новини не знайдено'}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"message": "Новини не знайдено"}, status=status.HTTP_404_NOT_FOUND
+            )
         except Exception as e:
-            return Response({'message': f'Помилка {e}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {"message": f"Помилка {e}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
     @extend_schema(
-        summary='Delete a News Item',
-        description='Deletes a news item by ID, including any associated photos and their storage.',
+        summary="Delete a News Item",
+        description="Deletes a news item by ID, including any associated photos and their storage.",
         responses={
-            200: {'description': 'The news item was successfully deleted.'},
-            404: {'description': 'News item not found.'},
-            500: {'description': 'Internal server error.'}
+            200: {"description": "The news item was successfully deleted."},
+            404: {"description": "News item not found."},
+            500: {"description": "Internal server error."},
         },
     )
     def destroy(self, request, pk):
@@ -361,29 +352,38 @@ class NewsView(ListModelMixin, CreateModelMixin, UpdateModelMixin,
         """
         try:
             news_item = News.objects.get(pk=pk)
-            delete_file_from_backblaze(news_item.photo_id)
+            if news_item.photo:
+                delete_file_from_backblaze(news_item.photo_id)
             news_item.photo.delete()
             news_item.delete()
 
-            return Response({'message': 'Новини були видалені'}, status=status.HTTP_200_OK)
+            return Response(
+                {"message": "Новини були видалені"}, status=status.HTTP_200_OK
+            )
 
         except News.DoesNotExist:
-            return Response({'message': 'Новини не знайдено'}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"message": "Новини не знайдено"}, status=status.HTTP_404_NOT_FOUND
+            )
 
         except Exception as e:
-            logger.error(f'Помилка видалення новин: {e}', exc_info=True)
-            return Response({'message': 'Внутрішня помилка сервера'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.error(f"Помилка видалення новин: {e}", exc_info=True)
+            return Response(
+                {"message": "Внутрішня помилка сервера"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
 
 # Partners-----------------------------------------------------------
 
 
-class PartnersView(ListModelMixin, CreateModelMixin, DestroyModelMixin,
-                   GenericViewSet):
+class PartnersView(ListModelMixin, CreateModelMixin, DestroyModelMixin, GenericViewSet):
     """
     ViewSet for managing partner entries in the system. Allows listing all partners, creating new partner entries,
     and deleting existing ones. Partners can have logos, which are converted to webP format upon upload.
     """
-    queryset = Partners.objects.all().prefetch_related('logo')
+
+    queryset = Partners.objects.all().prefetch_related("logo")
     permission_classes = [IsAuthenticated, IsApprovedUser]
     serializer_class = PartnerSerializer
 
@@ -399,17 +399,17 @@ class PartnersView(ListModelMixin, CreateModelMixin, DestroyModelMixin,
             FileModel: An instance representing the converted logo's storage details.
         """
         if logo:
-            webp_image_name, webp_image_id, image_url = converter_to_webP(
-                logo)
+            webp_image_name, webp_image_id, image_url = converter_to_webP(logo)
             new_file = FileModel.objects.create(
-                id=webp_image_id, name=webp_image_name, url=image_url, category='image')
+                id=webp_image_id, name=webp_image_name, url=image_url, category="image"
+            )
         return new_file
 
     @extend_schema(
-        summary='List all partners',
+        summary="List all partners",
         responses={
             200: PartnerSerializer(many=True),
-        }
+        },
     )
     def list(self, request, *args, **kwargs):
         """
@@ -427,26 +427,20 @@ class PartnersView(ListModelMixin, CreateModelMixin, DestroyModelMixin,
         return super().list(request, *args, **kwargs)
 
     @extend_schema(
-        summary='Create a new partner',
+        summary="Create a new partner",
         request={
-            'multipart/form-data': {
-                'type': 'object',
-                'properties': {
-                    'logo': {
-                        'type': 'string',
-                        'format': 'binary'
-                    },
-                    'website': {
-                        'type': 'string',
-                        'format': 'uri'
-                    }
-                }
+            "multipart/form-data": {
+                "type": "object",
+                "properties": {
+                    "logo": {"type": "string", "format": "binary"},
+                    "website": {"type": "string", "format": "uri"},
+                },
             }
         },
         responses={
             201: PartnerSerializer,
-            400: {'description': 'Поганий запит - недійсні дані'},
-        }
+            400: {"description": "Поганий запит - недійсні дані"},
+        },
     )
     def create(self, request):
         """
@@ -464,27 +458,29 @@ class PartnersView(ListModelMixin, CreateModelMixin, DestroyModelMixin,
             data on success or an error message on failure.
         """
         data = {}
-        logo = request.FILES.get('logo')
-        data['website'] = request.data.get('website')
+        logo = request.FILES.get("logo")
+        data["website"] = request.data.get("website")
         try:
             new_file = self.upload_logo(logo=logo)
             if new_file:
-                data['name'] = new_file.name
-                data['logo'] = new_file
+                data["name"] = new_file.name
+                data["logo"] = new_file
             new_partner = Partners.objects.create(**data)
             serializer = PartnerSerializer(new_partner)
 
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         except ValidationError as e:
-            return Response({'message': f'Помилка {e}'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"message": f"Помилка {e}"}, status=status.HTTP_400_BAD_REQUEST
+            )
 
     @extend_schema(
-        summary='Delete a partner',
+        summary="Delete a partner",
         responses={
-            200: {'description': 'Партнер був видалений'},
-            404: {'description': 'Партнер не знайдено'},
-            500: {'description': 'Внутрішня помилка сервера'}
-        }
+            200: {"description": "Партнер був видалений"},
+            404: {"description": "Партнер не знайдено"},
+            500: {"description": "Внутрішня помилка сервера"},
+        },
     )
     def destroy(self, request, pk):
         """
@@ -501,11 +497,19 @@ class PartnersView(ListModelMixin, CreateModelMixin, DestroyModelMixin,
         """
         try:
             partner = Partners.objects.get(pk=pk)
-            delete_file_from_backblaze(partner.logo_id)
+            if partner.logo is not None:
+                delete_file_from_backblaze(partner.logo_id)
             partner.logo.delete()
             partner.delete()
-            return Response({'message': 'Партнер був видалений'}, status=status.HTTP_200_OK)
+            return Response(
+                {"message": "Партнер був видалений"}, status=status.HTTP_200_OK
+            )
         except Partners.DoesNotExist:
-            return Response({'message': 'Партнер не знайдено'}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"message": "Партнер не знайдено"}, status=status.HTTP_404_NOT_FOUND
+            )
         except Exception as e:
-            return Response({'message': f'Помилка {e}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {"message": f"Помилка {e}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
