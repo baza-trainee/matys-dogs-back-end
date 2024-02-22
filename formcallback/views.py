@@ -100,7 +100,7 @@ class NotificationAdmin(
             500: "Internal server error",
         },
     )
-    def update(self, request, pk):
+    def update(self, request, pk, *args, **kwargs):
         """
         Updates the status of a notification identified by its primary key. Validates the request data
         and applies the updates if valid. Returns the updated notification data on success.

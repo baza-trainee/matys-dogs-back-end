@@ -114,7 +114,7 @@ class AuthenticationService(
         },
     )
     @action(detail=False, methods=["POST"], url_path="register")
-    def register(self, request):
+    def register(self, request, *args, **kwargs):
         data = json.loads(request.body)
 
         self.email_validation(email=data["email"])
@@ -183,7 +183,7 @@ class AuthenticationService(
         },
     )
     @action(detail=False, methods=["POST"], url_path="login")
-    def login(self, request):
+    def login(self, request, *args, **kwargs):
         data = json.loads(request.body)
         email = data["email"]
         password = data["password"]
@@ -263,7 +263,7 @@ class AuthenticationService(
         },
     )
     @action(detail=False, methods=["POST"], url_path="reset-password/<uidb64>/<token>")
-    def reset_password(self, request, uidb64, token):
+    def reset_password(self, request, uidb64, token, *args, **kwargs):
         try:
             new_password_data = json.loads(request.body)
             password = new_password_data["password"]
@@ -330,7 +330,7 @@ class AuthenticationService(
         },
     )
     @action(detail=False, methods=["POST"], url_path="forgot-password")
-    def forgot_password(self, request):
+    def forgot_password(self, request, *args, **kwargs):
         data = json.loads(request.body)
         email = data["email"]
         self.email_validation(email=email)

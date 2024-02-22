@@ -29,7 +29,7 @@ class UserMini(models.Model):
 class IsApprovedUser(permissions.BasePermission):
     message = 'User is not approved.'
 
-    def has_permission(self, request):
+    def has_permission(self, request, view):
         if request.user.is_superuser:
             return True
         else:

@@ -70,7 +70,7 @@ class MainPageView(ListModelMixin, GenericViewSet):
             ),
         ]
     )
-    def list(self):
+    def list(self, request, *args, **kwargs):
         """
         This method is called when a GET request is made to the view. It retrieves the necessary data from the database, serializes it using the appropriate serializers, and returns the serialized data as a response.
 
@@ -229,7 +229,7 @@ class NewsView(
             400: {"description": "Invalid data provided."},
         },
     )
-    def create(self, request):
+    def create(self, request, *args, **kwargs):
         """
         Creates a new news item with optional photo upload. The photo, if provided, is processed and converted
         to webP format using the handle_photo method. This method also enforces a limit on the total number
@@ -286,7 +286,7 @@ class NewsView(
             500: {"description": "Internal server error."},
         },
     )
-    def update(self, request, pk):
+    def update(self, request, pk, *args, **kwargs):
         """
         Updates an existing news item identified by its primary key (pk). This includes updating textual content
         and optionally replacing the existing photo with a new one. If a new photo is provided, it replaces the
@@ -334,7 +334,7 @@ class NewsView(
             500: {"description": "Internal server error."},
         },
     )
-    def destroy(self, pk):
+    def destroy(self, pk, *args, **kwargs):
         """
         Deletes a specific news item identified by its primary key (pk). Before deletion, it ensures that any associated
         photo and its file stored in Backblaze storage are also deleted, preventing orphaned files.
@@ -442,7 +442,7 @@ class PartnersView(ListModelMixin, CreateModelMixin, DestroyModelMixin, GenericV
             400: {"description": "Поганий запит - недійсні дані"},
         },
     )
-    def create(self, request):
+    def create(self, request, *args, **kwargs):
         """
         Creates a new partner entry in the system. This process may include uploading and converting a logo
         to webP format if a logo file is provided in the request. The new partner, including the converted logo,
@@ -482,7 +482,7 @@ class PartnersView(ListModelMixin, CreateModelMixin, DestroyModelMixin, GenericV
             500: {"description": "Внутрішня помилка сервера"},
         },
     )
-    def destroy(self, request, pk):
+    def destroy(self, pk, *args, **kwargs):
         """
         Deletes an existing partner entry identified by the primary key (pk). Before deletion, it ensures that
         any associated logo and its file stored in Backblaze storage are also deleted, preventing orphaned files.

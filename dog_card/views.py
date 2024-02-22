@@ -223,7 +223,7 @@ class DogCardSearch(mixins.ListModelMixin, GenericViewSet):
             500: {"description": "Internal Server Error"},
         },
     )
-    def list(self, request):
+    def list(self, request, *args, **kwargs):
         """
         Overrides the default list method to incorporate search functionality based on query parameters.
         """
@@ -509,7 +509,7 @@ class DogCardView(
             500: "Internal Server Error for any other unforeseen errors.",
         },
     )
-    def update(self, request, pk):
+    def update(self, request, pk, *args, **kwargs):
         """
         Updates an existing DogCardModel instance.
 
@@ -551,7 +551,7 @@ class DogCardView(
             500: "Internal Server Error for any other unforeseen errors.",
         },
     )
-    def destroy(self, pk):
+    def destroy(self, pk, *args, **kwargs):
         """
         Deletes a DogCardModel instance along with its associated photo.
 

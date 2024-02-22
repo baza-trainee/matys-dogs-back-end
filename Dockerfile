@@ -30,6 +30,7 @@ RUN pip install --upgrade pip \
 
 COPY . .
 
+RUN mkdir -p /app/staticfiles
 VOLUME ["/app/media", "/vol/web/media"]
 
 EXPOSE 8000
