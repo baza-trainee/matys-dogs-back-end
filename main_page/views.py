@@ -70,7 +70,7 @@ class MainPageView(ListModelMixin, GenericViewSet):
             ),
         ]
     )
-    def list(self, request):
+    def list(self):
         """
         This method is called when a GET request is made to the view. It retrieves the necessary data from the database, serializes it using the appropriate serializers, and returns the serialized data as a response.
 
@@ -216,8 +216,8 @@ class NewsView(
                 "properties": {
                     "title": {"type": "string", "maxLength": 60},
                     "title_en": {"type": "string", "maxLength": 60},
-                    "sub_text": {"type": "string", "maxLength": 150},
-                    "sub_text_en": {"type": "string", "maxLength": 150},
+                    "sub_text": {"type": "string", "maxLength": 175},
+                    "sub_text_en": {"type": "string", "maxLength": 175},
                     "url": {"type": "string", "format": "uri"},
                     "photo": {"type": "string", "format": "binary"},
                 },
@@ -270,10 +270,10 @@ class NewsView(
             "multipart/form-data": {
                 "type": "object",
                 "properties": {
-                    "title": {"type": "string", "maxLength": 100},
-                    "title_en": {"type": "string", "maxLength": 100},
-                    "sub_text": {"type": "string", "maxLength": 300},
-                    "sub_text_en": {"type": "string", "maxLength": 300},
+                    "title": {"type": "string", "maxLength": 60},
+                    "title_en": {"type": "string", "maxLength": 60},
+                    "sub_text": {"type": "string", "maxLength": 175},
+                    "sub_text_en": {"type": "string", "maxLength": 175},
                     "url": {"type": "string", "format": "uri"},
                     "photo": {"type": "string", "format": "binary"},
                 },
@@ -334,7 +334,7 @@ class NewsView(
             500: {"description": "Internal server error."},
         },
     )
-    def destroy(self, request, pk):
+    def destroy(self, pk):
         """
         Deletes a specific news item identified by its primary key (pk). Before deletion, it ensures that any associated
         photo and its file stored in Backblaze storage are also deleted, preventing orphaned files.

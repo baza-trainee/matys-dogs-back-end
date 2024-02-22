@@ -36,8 +36,7 @@ class DogCardModel(models.Model):
         FileModel,
         on_delete=models.CASCADE,
         limit_choices_to=models.Q(category="image"),
-        null=True,
-        blank=False,
+        blank=True,
     )
 
     def photo_url(self):
@@ -48,3 +47,6 @@ class DogCardModel(models.Model):
 
     class Meta:
         ordering = ["id"]
+        verbose_name = "Картка собаки"
+        verbose_name_plural = "Картки собак"
+        

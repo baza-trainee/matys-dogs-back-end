@@ -10,14 +10,4 @@ def image_validation(image_obj):
         raise ValidationError(detail={'error': 'Недійсний формат'})
 
 
-def document_validation(document_obj):
-    if not document_obj:
-        raise ValidationError(detail={'error': 'Документ не знайдено'})
 
-    valid_extensions = ('.pdf', '.doc', '.docx', '.txt')
-    if not document_obj.name.endswith(valid_extensions):
-        raise ValidationError(detail={'error': 'Некоректний формат файлу'})
-
-    if document_obj.size > 2097152:  # 2MB
-        raise ValidationError(
-            detail={'error': 'Розмір документа не повинен перевищувати 2MB'})

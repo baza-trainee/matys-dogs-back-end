@@ -14,7 +14,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework.decorators import action
 from django.contrib.auth.hashers import make_password
 from drf_spectacular.utils import OpenApiResponse, extend_schema
-from rest_framework.viewsets import GenericViewSet, ViewSet
+from rest_framework.viewsets import GenericViewSet
 from .serializer import UserMiniSerializer, UserToApprove
 import json
 import os

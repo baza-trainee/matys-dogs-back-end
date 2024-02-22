@@ -8,8 +8,12 @@ class AboutSerializer(ModelSerializer):
 
     class Meta:
         model = AboutModel
-        fields = ['quantity_of_animals', 'quantity_of_employees',
-                  'quantity_of_succeeds_adoptions', 'images']
+        fields = [
+            "quantity_of_animals",
+            "quantity_of_employees",
+            "quantity_of_succeeds_adoptions",
+            "images",
+        ]
 
 
 class ImagesSerializer(ModelSerializer):
@@ -17,11 +21,16 @@ class ImagesSerializer(ModelSerializer):
 
     class Meta:
         model = AboutModel
-        fields = ['images']
+        fields = ["images"]
+        verbose_name = "Про нас - фото"
 
 
 class EmploymentSerializer(ModelSerializer):
     class Meta:
         model = AboutModel
-        fields = ['quantity_of_employees',
-                  'quantity_of_succeeds_adoptions', 'quantity_of_animals']
+        fields = [
+            "quantity_of_employees",
+            "quantity_of_succeeds_adoptions",
+            "quantity_of_animals",
+        ]
+        verbose_name = "Про нас - статистика"

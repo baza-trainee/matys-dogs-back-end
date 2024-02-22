@@ -15,9 +15,9 @@ class NewsModel(models.Model):
     title = models.CharField(max_length=60, blank=False)
     post_at = models.DateTimeField(auto_now_add=True)
     update_at = models.DateTimeField(auto_now=True)
-    sub_text = models.CharField(max_length=150, null=False, blank=False)
+    sub_text = models.CharField(max_length=175, null=False, blank=False)
     url = models.URLField(max_length=300)
-    photo = models.ForeignKey(FileModel, on_delete=models.CASCADE, null=True, blank=True)
+    photo = models.ForeignKey(FileModel, on_delete=models.CASCADE)
 
     objects = NewsManager()
 
@@ -38,16 +38,20 @@ class NewsModel(models.Model):
 
     class Meta:
         ordering = ["-post_at"]
+        verbose_name = "Новина"
+        verbose_name_plural = "Новини"
 
 
 class Partners(models.Model):
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=45)
     website = models.URLField(max_length=300, blank=False, null=False)
-    logo = models.ForeignKey(FileModel, on_delete=models.CASCADE, null=False, blank=True)
+    logo = models.ForeignKey(FileModel, on_delete=models.CASCADE)
 
     def logo_url(self):
         return self.logo.url
 
     class Meta:
         ordering = ["name"]
+        verbose_name = "Партнер"
+        verbose_name_plural = "Партнери"
