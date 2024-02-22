@@ -253,8 +253,7 @@ class NewsView(
                 data=request.data, context={"request": request, "view": self}
             )
             serilaizer.is_valid(raise_exception=True)
-            if serilaizer.is_valid():
-                serilaizer.save()
+            serilaizer.save()
 
             return Response(
                 {"massage": "news was created", "news": serilaizer.data},
@@ -303,13 +302,12 @@ class NewsView(
             Response: An HttpResponse indicating the outcome of the update operation, either success with the updated
             news item's data or failure with an appropriate error message.
         """
-        news = News.objects.get(pk=pk)
-        serilaizer = self.get_serializer(
-            news, data=request.data, context={"request": request, "view": self}
-        )
-        serilaizer.is_valid(raise_exception=True)
         try:
-
+            news = News.objects.get(pk=pk)
+            serilaizer = self.get_serializer(
+                news, data=request.data, context={"request": request, "view": self}
+            )
+            serilaizer.is_valid(raise_exception=True)
             self.update_news(news, serilaizer.validated_data)
             self.perform_update(serializer=serilaizer)
             return Response(

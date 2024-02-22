@@ -525,9 +525,8 @@ class DogCardView(
                 dog_card, data=request.data, context={"request": request, "view": self}
             )
             serializer.is_valid(raise_exception=True)
-            if serializer.is_valid():
-                self.update_dog_card(dog_card, serializer.validated_data)
-                self.perform_update(serializer=serializer)
+            self.update_dog_card(dog_card, serializer.validated_data)
+            self.perform_update(serializer=serializer)
             return Response(
                 {"message": "Карта оновлена", "updated_dog_card": serializer.data},
                 status=status.HTTP_200_OK,
