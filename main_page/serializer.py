@@ -4,7 +4,6 @@ from backblaze.serializer import FileSerializer
 from rest_framework.exceptions import ValidationError
 
 
-
 class NewsSerializer(ModelSerializer):
     photo = FileSerializer()
 
@@ -45,9 +44,10 @@ class NewsTranslationsSerializer(ModelSerializer):
 
     def create(self, validated_data):
         photo_data = self.context["request"].FILES.get("photo", None)
-        news = News.objects.create(**validated_data)
-        if photo_data:
+        if photo_data is not None:
             photo_obj = self.context["view"].handle_photo(photo_data, None)
+            validated_data["photo"] = photo_obj
+            news = News.objects.create(**validated_data)
             if photo_obj:
                 news.photo = photo_obj
                 news.save()
@@ -55,15 +55,14 @@ class NewsTranslationsSerializer(ModelSerializer):
 
     def update(self, instance, validated_data):
         photo_data = self.context["request"].FILES.get("photo", None)
-        news = super().update(instance, validated_data)
         if photo_data:
             photo_obj = self.context["view"].handle_photo(photo_data, news)
+            validated_data["photo"] = photo_obj
+            news = super().update(instance, validated_data)
             if photo_obj:
                 news.photo = photo_obj
                 news.save()
             return news
-
-
 
 
 class PartnerSerializer(ModelSerializer):

@@ -2,6 +2,7 @@ from rest_framework.serializers import ModelSerializer
 from dog_card.models import DogCardModel
 from backblaze.serializer import FileSerializer
 from backblaze.utils.b2_utils import delete_file_from_backblaze
+
 # Serializers define the API representation.
 
 
@@ -11,16 +12,16 @@ class DogCardSerializer(ModelSerializer):
     class Meta:
         model = DogCardModel
         fields = (
-            'id',
-            'name',
-            'ready_for_adoption',
-            'gender',
-            'age',
-            'sterilization',
-            'vaccination_parasite_treatment',
-            'size',
-            'description',
-            'photo'
+            "id",
+            "name",
+            "ready_for_adoption",
+            "gender",
+            "age",
+            "sterilization",
+            "vaccination_parasite_treatment",
+            "size",
+            "description",
+            "photo",
         )
 
 
@@ -30,39 +31,39 @@ class DogCardTranslationSerializer(ModelSerializer):
     class Meta:
         model = DogCardModel
         fields = (
-            'id',
-            'name',
-            'name_en',
-            'ready_for_adoption',
-            'gender',
-            'gender_en',
-            'age',
-            'age_en',
-            'sterilization',
-            'vaccination_parasite_treatment',
-            'size',
-            'size_en',
-            'description',
-            'description_en',
-            'photo'
+            "id",
+            "name",
+            "name_en",
+            "ready_for_adoption",
+            "gender",
+            "gender_en",
+            "age",
+            "age_en",
+            "sterilization",
+            "vaccination_parasite_treatment",
+            "size",
+            "size_en",
+            "description",
+            "description_en",
+            "photo",
         )
 
     def create(self, validated_data):
-        photo_data = self.context['request'].FILES.get('photo', None)
-        dog_card = DogCardModel.objects.create(**validated_data)
+        photo_data = self.context["request"].FILES.get("photo", None)
         if photo_data:
-            photo_obj = self.context['view'].handle_photo(
-                photo_data, None)
+            photo_obj = self.context["view"].handle_photo(photo_data, None)
+            validated_data["photo"] = photo_obj
+            dog_card = DogCardModel.objects.create(**validated_data)
             dog_card.photo = photo_obj
             dog_card.save()
         return dog_card
 
     def update(self, instance, validated_data):
-        photo_data = self.context['request'].FILES.get('photo', None)
-        dog_card = super().update(instance, validated_data)
+        photo_data = self.context["request"].FILES.get("photo", None)
         if photo_data:
-            photo_obj = self.context['view'].handle_photo(
-                photo_data, dog_card)
+            photo_obj = self.context["view"].handle_photo(photo_data, dog_card)
+            validated_data["photo"] = photo_obj
+            dog_card = super().update(instance, validated_data)
             if photo_obj:
                 dog_card.photo = photo_obj
                 dog_card.save()
@@ -79,6 +80,6 @@ class DogForPick(ModelSerializer):
     class Meta:
         model = DogCardModel
         fields = (
-            'id',
-            'name',
+            "id",
+            "name",
         )
