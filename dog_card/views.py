@@ -424,8 +424,7 @@ class DogCardView(
                 data=request.data, context={"request": request, "view": self}
             )
             serilaizer.is_valid(raise_exception=True)
-            if serilaizer.isvalid():
-                self.perform_create(serilaizer)
+            self.perform_create(serilaizer)
             return Response(
                 {"message": "Карта створена", "new_dogs_card": serilaizer.data},
                 status=status.HTTP_201_CREATED,
@@ -550,7 +549,7 @@ class DogCardView(
             500: "Internal Server Error for any other unforeseen errors.",
         },
     )
-    def destroy(self, pk, *args, **kwargs):
+    def destroy(self, request, pk, *args, **kwargs):
         """
         Deletes a DogCardModel instance along with its associated photo.
 
@@ -561,7 +560,7 @@ class DogCardView(
         Returns a response indicating the outcome of the deletion operation.
         """
         try:
-            card = DogCardModel.objects.get(id=pk)
+            card = DogCardModel.objects.get(pk=pk)
             if card.photo:
                 delete_file_from_backblaze(card.photo_id)
             card.photo.delete()

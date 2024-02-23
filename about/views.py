@@ -134,7 +134,7 @@ class AboutImages(mixins.ListModelMixin, mixins.CreateModelMixin, GenericViewSet
         description="Delete an image from AboutModel",
         responses={200: "Зображення видалено", 404: "Файл не знайдено"},
     )
-    def destroy(self, pk):
+    def destroy(self, request, pk):
         """
         Deletes an image entry from the AboutModel by its primary key (pk). This also involves removing
         the image from the associated AboutModel instance and deleting the image file.

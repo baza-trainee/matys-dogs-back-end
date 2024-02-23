@@ -60,7 +60,7 @@ class NotificationAdmin(
     """
 
     permission_classes = [IsAuthenticated, IsApprovedUser]
-    queryset = CallbackForm.objects.all()
+    queryset = CallbackForm.objects.all().prefetch_related("id_dog")
     serializer_class = Notice
 
     @extend_schema(

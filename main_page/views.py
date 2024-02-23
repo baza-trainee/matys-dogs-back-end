@@ -332,7 +332,7 @@ class NewsView(
             500: {"description": "Internal server error."},
         },
     )
-    def destroy(self, pk, *args, **kwargs):
+    def destroy(self, request, pk, *args, **kwargs):
         """
         Deletes a specific news item identified by its primary key (pk). Before deletion, it ensures that any associated
         photo and its file stored in Backblaze storage are also deleted, preventing orphaned files.
@@ -480,7 +480,7 @@ class PartnersView(ListModelMixin, CreateModelMixin, DestroyModelMixin, GenericV
             500: {"description": "Внутрішня помилка сервера"},
         },
     )
-    def destroy(self, pk, *args, **kwargs):
+    def destroy(self, request, pk, *args, **kwargs):
         """
         Deletes an existing partner entry identified by the primary key (pk). Before deletion, it ensures that
         any associated logo and its file stored in Backblaze storage are also deleted, preventing orphaned files.
