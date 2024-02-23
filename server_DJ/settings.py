@@ -21,7 +21,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 load_dotenv()
 
-# Использование секретного ключа из переменной окружения
+
 
 
 # Quick-start development settings - unsuitable for production
@@ -162,7 +162,8 @@ SPECTACULAR_SETTINGS = {
 }
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(days=30),
+    "ACCESS_TOKEN_LIFETIME": timedelta(days=14),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=14),
 }
 
 # Internationalization
