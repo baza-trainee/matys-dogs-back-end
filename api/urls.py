@@ -6,7 +6,7 @@ urlpatterns = [
         {'post': 'login'}), name='login'),
     path('register', AuthenticationService.as_view(
         {'post': 'register'}), name='register'),
-    path('reset-passoword/<uidb64>/<token>',
+    path('reset-passoword/<str:uidb64>/<str:token>',
          AuthenticationService.as_view({'post': 'reset_password'}), name='reset_password'),
     path('forgot-password', AuthenticationService.as_view(
         {'post': 'forgot_password'}), name='forgot_password'),

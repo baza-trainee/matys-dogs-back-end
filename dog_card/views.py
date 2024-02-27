@@ -9,10 +9,13 @@ from backblaze.models import FileModel
 from rest_framework.exceptions import ValidationError
 from rest_framework.viewsets import GenericViewSet
 from backblaze.utils.b2_utils import converter_to_webP, delete_file_from_backblaze
-from backblaze.utils.validation import image_validation
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import extend_schema, OpenApiParameter, inline_serializer
 from rest_framework.parsers import MultiPartParser, FormParser
+from drf_spectacular.utils import (
+    extend_schema,
+    OpenApiParameter,
+)
+
 
 # Create your views here.
 
@@ -40,13 +43,11 @@ class DogCardSearch(mixins.ListModelMixin, GenericViewSet):
             list: A list of strings describing ages in years, adjusted for language nuances.
         """
         possible_ages = []
-        # Convert bounds from months to years for clearer age descriptions
         lower_bound_years = max(1, lower_bound / 12)
         upper_bound_years = upper_bound / 12
 
         age_years = lower_bound_years
         while age_years <= upper_bound_years:
-            # Determine the correct suffix based on the age
             if age_years == 1:
                 year_str = "рік"
             elif 1 < age_years < 5 or (age_years % 1 == 0.5 and age_years <= 4.5):
@@ -54,17 +55,14 @@ class DogCardSearch(mixins.ListModelMixin, GenericViewSet):
             else:
                 year_str = "років"
 
-            # Format age with appropriate decimal places and replace dot with comma for local convention
             year_num = (
                 f"{int(age_years)}"
                 if age_years % 1 == 0
                 else f"{age_years:.1f}".replace(".", ",")
             )
 
-            # Add the formatted age description to the list
             possible_ages.append(f"{year_num} {year_str}")
 
-            # Increment age_years by 0.5 to consider half-year increments
             age_years += 0.5
         return possible_ages
 
@@ -80,24 +78,19 @@ class DogCardSearch(mixins.ListModelMixin, GenericViewSet):
             list: A list of age strings in months and years.
         """
         possible_ages = []
-        # Ensure that age_months starts from the lower bound and increments until it reaches the upper bound.
         age_months = lower_bound
         while age_months <= upper_bound:
-            # Determine the correct suffix based on the number of months.
             if age_months in [1, 2, 3, 4]:
                 month_str = "місяць" if age_months == 1 else "місяці"
             else:
                 month_str = "місяців"
 
-                # Format the age string correctly for both whole numbers and decimals.
                 age_str = (
                     f"{age_months:.1f}" if age_months % 1 else f"{int(age_months)}"
                 )
                 possible_ages.append(f"{age_str} {month_str}")
 
-            # Increment by 0.5 months until reaching the upper bound.
             age_months += 0.5
-        # Check if exactly 12 months should be translated to "1 рік" and add if not already included.
         if upper_bound >= 12 and "1 рік" not in possible_ages:
             possible_ages.append("1 рік")
         return possible_ages
@@ -215,12 +208,8 @@ class DogCardSearch(mixins.ListModelMixin, GenericViewSet):
             ),
         ],
         responses={
-            200: inline_serializer(
-                name="DogCardListResponse",
-                fields={"cards": DogCardSerializer(many=True)},
-            ),
-            400: {"description": "No cards found matching the criteria."},
-            500: {"description": "Internal Server Error"},
+            200: DogCardSerializer(many=True),
+            400: {"message": "Карт не знайдено"},
         },
     )
     def list(self, request, *args, **kwargs):
@@ -241,14 +230,14 @@ class DogCardSearch(mixins.ListModelMixin, GenericViewSet):
             )
             if searched_dogs_cards:
                 serializers = DogCardSerializer(searched_dogs_cards, many=True)
-                return Response({"Cards": serializers.data})
+                return Response(serializers.data, status=status.HTTP_200_OK)
             else:
                 return Response(
                     {"message": "Карт не знайдено"}, status=status.HTTP_400_BAD_REQUEST
                 )
-        except ValidationError as e:
+        except Exception:
             return Response(
-                {"message": f"Помилка {e}"},
+                {"message": "Помилка сервера"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -364,16 +353,10 @@ class DogCardView(
                     },
                     "age": {
                         "type": "string",
-                        "enum": [
-                            "щеня",
-                            "молода собака",
-                            "доросла собака",
-                        ],
                         "description": "Age of the dog",
                     },
                     "age_en": {
                         "type": "string",
-                        "enum": ["puppy", "young dog", "adult dog"],
                         "description": "Age of the dog",
                     },
                     "sterilization": {"type": "boolean"},
@@ -394,15 +377,13 @@ class DogCardView(
                     },
                     "description": {"type": "string"},
                     "description_en": {"type": "string"},
-                    "photo": {"type": "string", "format": "binary", "nullable": True},
+                    "photo": {"type": "string", "format": "binary"},
                 },
                 "required": [
                     "name",
                     "ready_for_adoption",
                     "gender",
                     "age",
-                    "sterilization",
-                    "vaccination_parasite_treatment",
                     "size",
                     "description",
                 ],
@@ -410,7 +391,8 @@ class DogCardView(
         },
         responses={
             201: DogCardTranslationSerializer,
-            400: "Bad Request if the input data is invalid.",
+            400: {"description": "Помилка при створені ValidationError"},
+            500: {"description": "Помилка сервера"},
         },
     )
     def create(self, request, *args, **kwargs):
@@ -426,14 +408,18 @@ class DogCardView(
             serilaizer.is_valid(raise_exception=True)
             self.perform_create(serilaizer)
             return Response(
-                {"message": "Карта створена", "new_dogs_card": serilaizer.data},
+                serilaizer.data,
                 status=status.HTTP_201_CREATED,
             )
         except ValidationError as e:
-            return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"description": f"Помилка при створені {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         except Exception as e:
             return Response(
-                {"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"description": "Помилка сервера"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
     @extend_schema(
@@ -458,16 +444,10 @@ class DogCardView(
                     },
                     "age": {
                         "type": "string",
-                        "enum": [
-                            "щеня",
-                            "молода собака",
-                            "доросла собака",
-                        ],
                         "description": "Age of the dog",
                     },
                     "age_en": {
                         "type": "string",
-                        "enum": ["puppy", "young dog", "adult dog"],
                         "description": "Age of the dog",
                     },
                     "sterilization": {"type": "boolean"},
@@ -488,15 +468,13 @@ class DogCardView(
                     },
                     "description": {"type": "string"},
                     "description_en": {"type": "string"},
-                    "photo": {"type": "string", "format": "binary", "nullable": True},
+                    "photo": {"type": "string", "format": "binary"},
                 },
                 "required": [
                     "name",
                     "ready_for_adoption",
                     "gender",
                     "age",
-                    "sterilization",
-                    "vaccination_parasite_treatment",
                     "size",
                     "description",
                 ],
@@ -504,8 +482,9 @@ class DogCardView(
         },
         responses={
             200: DogCardTranslationSerializer,
-            404: "Not Found if the dog card does not exist.",
-            500: "Internal Server Error for any other unforeseen errors.",
+            400: {"description": "Помилка при оновлені ValidationError"},
+            404: {"description": "Карта не знайдена"},
+            500: {"description": "Помилка сервера"},
         },
     )
     def update(self, request, pk, *args, **kwargs):
@@ -527,16 +506,21 @@ class DogCardView(
             self.update_dog_card(dog_card, serializer.validated_data)
             self.perform_update(serializer=serializer)
             return Response(
-                {"message": "Карта оновлена", "updated_dog_card": serializer.data},
+                serializer.data,
                 status=status.HTTP_200_OK,
+            )
+        except ValidationError as e:
+            return Response(
+                {"description": f"Помилка при оновлені {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
         except DogCardModel.DoesNotExist:
             return Response(
-                {"message": "Карта не знайдена"}, status=status.HTTP_404_NOT_FOUND
+                {"description": "Карта не знайдена"}, status=status.HTTP_404_NOT_FOUND
             )
         except Exception as e:
             return Response(
-                {"Error_in_update": str(e)},
+                {"description": "Помилка сервера"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -544,9 +528,9 @@ class DogCardView(
         summary="Delete a dog card",
         description="Permanently removes a dog card from the system, including its associated photo from external storage.",
         responses={
-            200: "Successful Deletion if the dog card was found and deleted.",
-            404: "Not Found if no dog card matches the provided primary key.",
-            500: "Internal Server Error for any other unforeseen errors.",
+            200: {"description": "Карта видалена"},
+            404: {"description": "Карти не знайдено"},
+            500: {"description": "Помилка сервера"},
         },
     )
     def destroy(self, request, pk, *args, **kwargs):
@@ -565,13 +549,15 @@ class DogCardView(
                 delete_file_from_backblaze(card.photo_id)
             card.photo.delete()
             card.delete()
-            return Response({"message": "Карта видалена"}, status=status.HTTP_200_OK)
+            return Response(
+                {"description": "Карта видалена"}, status=status.HTTP_200_OK
+            )
         except DogCardModel.DoesNotExist:
             return Response(
-                {"message": "Карти не знайдено"}, status=status.HTTP_404_NOT_FOUND
+                {"description": "Карти не знайдено"}, status=status.HTTP_404_NOT_FOUND
             )
-        except ValidationError as e:
+        except Exception:
             return Response(
-                {"message": f"Помилка {e}"},
+                {"description": "Помилка сервера"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )

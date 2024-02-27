@@ -50,3 +50,4 @@ class DogCardModel(models.Model):
         verbose_name = "Картка собаки"
         verbose_name_plural = "Картки собак"
         
+        

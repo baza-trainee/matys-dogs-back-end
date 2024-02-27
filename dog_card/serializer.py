@@ -47,6 +47,10 @@ class DogCardTranslationSerializer(ModelSerializer):
             "description_en",
             "photo",
         )
+        extra_kwargs = {
+            "sterilization": {"required": False},
+            "vaccination_parasite_treatment": {"required": False},
+        }
 
     def create(self, validated_data):
         photo_data = self.context["request"].FILES.get("photo", None)

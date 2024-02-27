@@ -89,7 +89,9 @@ class AboutImages(mixins.ListModelMixin, mixins.CreateModelMixin, GenericViewSet
         },
         responses={
             201: ImagesSerializer,
-            400: "Bad request",
+            400: {"description": "Зображення не знайдено"},
+            400: {"description": "Поганий запит - ValidationError"},
+            500: {"description": "Помилка сервера"},
         },
     )
     def create(self, request):
@@ -110,7 +112,8 @@ class AboutImages(mixins.ListModelMixin, mixins.CreateModelMixin, GenericViewSet
 
             if images is None:
                 return Response(
-                    {"message": "Image not found"}, status=status.HTTP_400_BAD_REQUEST
+                    {"message": "Зображення не знайдено "},
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
 
             webp_image_name, webp_image_id, image_url = converter_to_webP(images)
@@ -123,16 +126,29 @@ class AboutImages(mixins.ListModelMixin, mixins.CreateModelMixin, GenericViewSet
             about.images.add(file_model)
             serializer = FileSerializer(file_model, many=False)
 
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(
+                serializer.data,
+                status=status.HTTP_201_CREATED,
+            )
         except ValidationError as e:
             return Response(
-                {"message": f"{str(e)}"}, status=status.HTTP_400_BAD_REQUEST
+                f"Поганий запит - {str(e)}",
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except Exception:
+            return Response(
+                {"message": "Помилка сервера"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
     @extend_schema(
         summary="Delete an image from AboutModel",
         description="Delete an image from AboutModel",
-        responses={200: "Зображення видалено", 404: "Файл не знайдено"},
+        responses={
+            200: {"description": "Зображення видалено"},
+            404: {"description": "Файл не знайдено"},
+            500: {"description": "Помилка сервера"},
+        },
     )
     def destroy(self, request, pk):
         """
@@ -151,14 +167,16 @@ class AboutImages(mixins.ListModelMixin, mixins.CreateModelMixin, GenericViewSet
             file = FileModel.objects.get(pk=pk)
             file.delete()
             about.images.remove(pk)
-            return Response({"message": "Image deleted"}, status=status.HTTP_200_OK)
+            return Response(
+                {"description": "Зображення видалено"}, status=status.HTTP_200_OK
+            )
         except FileModel.DoesNotExist:
             return Response(
-                {"message": "File not found"}, status=status.HTTP_404_NOT_FOUND
+                {"description": "Файл не знайдено"}, status=status.HTTP_404_NOT_FOUND
             )
-        except Exception as e:
+        except Exception:
             return Response(
-                {"message": f"Unexpected error occurred: {str(e)}"},
+                {"description": "Помилка сервера"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -205,7 +223,7 @@ class AboutEmployment(mixins.ListModelMixin, mixins.CreateModelMixin, GenericVie
         request=EmploymentSerializer,
         responses={
             200: EmploymentSerializer,
-            400: {"description": "Поганий запит - недійсні дані"},
+            400: {"description": "Поганий запит - ValidationError"},
             500: {"description": "Внутрішня помилка сервера"},
         },
     )
@@ -227,13 +245,13 @@ class AboutEmployment(mixins.ListModelMixin, mixins.CreateModelMixin, GenericVie
             serializer.is_valid(raise_exception=True)
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
-        except ValidationError:
+        except ValidationError as e:
             return Response(
-                {"message": "Поганий запит - недійсні дані"},
+                f"Поганий запит - {str(e)}",
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        except Exception as e:
+        except Exception:
             return Response(
-                {"message": f"Помилка {e}"},
+                {"message": "Помилка сервера"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )

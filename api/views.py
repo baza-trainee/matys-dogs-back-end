@@ -13,7 +13,7 @@ from django.conf import settings
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework.decorators import action
 from django.contrib.auth.hashers import make_password
-from drf_spectacular.utils import OpenApiResponse, extend_schema
+from drf_spectacular.utils import OpenApiResponse, OpenApiParameter, extend_schema
 from rest_framework.viewsets import GenericViewSet
 from .serializer import UserMiniSerializer, UserToApprove
 import json
@@ -49,18 +49,18 @@ class AuthenticationService(
 
         if (password or confirmPassword) == "":
             raise ValidationError(
-                {"error": "Будь ласка, заповніть всі обов'язкові поля"}
+                {"description": "Будь ласка, заповніть всі обов'язкові поля"}
             )
 
         password_regex = r"^(?=.*[A-Z])(?=.*[a-z])(?=.*[0-9])(?=.*[!-_)(.,]).{8,12}$"
         if not re.match(password_regex, password or confirmPassword):
             raise ValidationError(
                 {
-                    "error": "Пароль повинен містити великі та малі букви, цифри та один з спеціальних символів, і мати від 8 до 12 символів"
+                    "description": "Пароль повинен містити великі та малі букви, цифри та один з спеціальних символів, і мати від 8 до 12 символів"
                 }
             )
         if password != confirmPassword:
-            raise ValidationError({"error": "Паролі не співпадають"})
+            raise ValidationError({"description": "Паролі не співпадають"})
 
     @extend_schema(
         summary="Register user",
@@ -96,7 +96,7 @@ class AuthenticationService(
                 response={
                     "type": "object",
                     "properties": {
-                        "message": {
+                        "description": {
                             "type": "string",
                             "example": "Користувач зареєстрований",
                         },
@@ -104,41 +104,47 @@ class AuthenticationService(
                     },
                 },
             ),
-            400: OpenApiResponse(
-                description="Invalid request or user already exists",
-                response={
-                    "type": "object",
-                    "properties": {"error": {"type": "string"}},
-                },
-            ),
+            400: {"description": "Помилка при реєстрації ValidationError"},
+            500: {"description": "Помилка сервера"},
         },
     )
     @action(detail=False, methods=["POST"], url_path="register")
     def register(self, request, *args, **kwargs):
-        data = json.loads(request.body)
+        try:
+            data = json.loads(request.body)
 
-        self.email_validation(email=data["email"])
-        self.password_validation(
-            password=data["password"], confirmPassword=data["confirmPassword"]
-        )
-
-        if User.objects.filter(email=data["email"]).exists():
-            raise ValidationError(
-                {"error": "Помилка регистрації. Користувач вже існує."}
+            self.email_validation(email=data["email"])
+            self.password_validation(
+                password=data["password"], confirmPassword=data["confirmPassword"]
             )
 
-        user = User.objects.create(
-            username=data["email"],
-            first_name=data["first_name"],
-            last_name=data["last_name"],
-            email=data["email"],
-            password=make_password(data["password"]),
-        )
-        UserMini.objects.create(user=user)
-        return Response(
-            {"message": "Користувач зареєстрований", "email": data["email"]},
-            status=status.HTTP_201_CREATED,
-        )
+            if User.objects.filter(email=data["email"]).exists():
+                raise ValidationError(
+                    {"description": "Помилка регистрації. Користувач вже існує."}
+                )
+
+            user = User.objects.create(
+                username=data["email"],
+                first_name=data["first_name"],
+                last_name=data["last_name"],
+                email=data["email"],
+                password=make_password(data["password"]),
+            )
+            UserMini.objects.create(user=user)
+            return Response(
+                {"description": "Користувач зареєстрований", "email": data["email"]},
+                status=status.HTTP_201_CREATED,
+            )
+        except ValidationError as e:
+            return Response(
+                {"description": f"Помилка при реєстрації {e}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except Exception as e:
+            return Response(
+                {"description": f"Помилка сервера"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
     @extend_schema(
         summary="Login user",
@@ -162,7 +168,7 @@ class AuthenticationService(
                 response={
                     "type": "object",
                     "properties": {
-                        "message": {
+                        "description": {
                             "type": "string",
                             "example": "Користувач увійшов в систему",
                         },
@@ -173,57 +179,64 @@ class AuthenticationService(
                     },
                 },
             ),
-            400: OpenApiResponse(
-                description="Invalid login credentials",
-                response={
-                    "type": "object",
-                    "properties": {"error": {"type": "string"}},
-                },
-            ),
+            400: {"description": "Помилка при вході в систему ValidationError"},
+            500: {"description": "Помилка сервера"},
         },
     )
     @action(detail=False, methods=["POST"], url_path="login")
     def login(self, request, *args, **kwargs):
-        data = json.loads(request.body)
-        email = data["email"]
-        password = data["password"]
+        try:
+            data = json.loads(request.body)
+            email = data["email"]
+            password = data["password"]
 
-        if not email or not password:
-            raise ValidationError({"error": "Електронна пошта та пароль потрібні"})
+            if not email or not password:
+                raise ValidationError({"error": "Електронна пошта та пароль потрібні"})
 
-        user = User.objects.filter(email=email).first()
+            user = User.objects.filter(email=email).first()
 
-        if not user:
-            raise ValidationError({"error": "Користувач не знайдений"})
+            if not user:
+                raise ValidationError({"description": "Користувач не знайдений"})
 
-        if not check_password(password, user.password):
-            raise ValidationError({"error": "Неправильний пароль"})
+            if not check_password(password, user.password):
+                raise ValidationError({"description": "Неправильний пароль"})
 
-        refresh = RefreshToken.for_user(user)
-        accsess = str(refresh.access_token)
+            refresh = RefreshToken.for_user(user)
+            accsess = str(refresh.access_token)
 
-        return Response(
-            {"message": "Користувач увійшов в систему", "access_token": accsess},
-            status=status.HTTP_200_OK,
-        )
+            return Response(
+                {
+                    "description": "Користувач увійшов в систему",
+                    "access_token": accsess,
+                },
+                status=status.HTTP_200_OK,
+            )
+        except ValidationError as e:
+            return Response(
+                {"description": f"Помилка при вході в систему {e}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except Exception as e:
+            return Response(
+                {"description": "Помилка сервера"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
     @extend_schema(
         summary="Reset password",
         parameters=[
-            {
-                "name": "uidb64",
-                "in": "path",
-                "description": "Base64 encoded user ID",
-                "required": True,
-                "schema": {"type": "string"},
-            },
-            {
-                "name": "token",
-                "in": "path",
-                "description": "Password reset token",
-                "required": True,
-                "schema": {"type": "string"},
-            },
+            OpenApiParameter(
+                name="uidb64",
+                description="Base64 encoded user ID",
+                required=True,
+                type=str,
+            ),
+            OpenApiParameter(
+                name="token",
+                description="Password reset token",
+                required=True,
+                type=str,
+            ),
         ],
         request={
             "application/json": {
@@ -251,18 +264,16 @@ class AuthenticationService(
                     },
                 },
             ),
-            400: OpenApiResponse(
-                description="Invalid request or token",
-                response={
-                    "type": "object",
-                    "properties": {
-                        "error": {"type": "string", "example": "Неприпустимий токен"}
-                    },
-                },
-            ),
+            400: {"description": "Неприпустимий токен"},
+            400: {"description": "Невірний запит error"},
+            500: {"description": "Помилка сервера"},
         },
     )
-    @action(detail=False, methods=["POST"], url_path="reset-password/<uidb64>/<token>")
+    @action(
+        detail=False,
+        methods=["POST"],
+        url_path="reset-password/<str:uidb64>/<str:token>",
+    )
     def reset_password(self, request, uidb64, token, *args, **kwargs):
         try:
             new_password_data = json.loads(request.body)
@@ -276,15 +287,23 @@ class AuthenticationService(
                 user.set_password(password)
                 user.save()
                 return Response(
-                    {"message": "Скидання пароля Успішні"}, status=status.HTTP_200_OK
+                    {"description": "Скидання пароля Успішні"},
+                    status=status.HTTP_200_OK,
                 )
             else:
                 return Response(
-                    {"error": "Неприпустимий токен"}, status=status.HTTP_400_BAD_REQUEST
+                    {"description": "Неприпустимий токен"},
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
         except (TypeError, ValueError, OverflowError, User.DoesNotExist) as e:
             return Response(
-                {"error": f"Невірний запит {e}"}, status=status.HTTP_400_BAD_REQUEST
+                {"description": f"Невірний запит {e}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except Exception:
+            return Response(
+                {"description": "Помилка сервера"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
     @extend_schema(
@@ -320,13 +339,14 @@ class AuthenticationService(
                 response={
                     "type": "object",
                     "properties": {
-                        "error": {
+                        "descriptiondescription": {
                             "type": "string",
                             "example": "Електронна пошта не існує",
                         }
                     },
                 },
             ),
+            500: {"description": "Помилка сервера"},
         },
     )
     @action(detail=False, methods=["POST"], url_path="forgot-password")
@@ -347,11 +367,16 @@ class AuthenticationService(
                 [email],
                 fail_silently=False,
             )
-            return Response({"message": "Електронна пошта була успішно надіслана"})
+            return Response({"description": "Електронна пошта була успішно надіслана"})
         except User.DoesNotExist:
             return Response(
-                {"error": "Електронна пошта не існує"},
+                {"description": "Електронна пошта не існує"},
                 status=status.HTTP_400_BAD_REQUEST,
+            )
+        except Exception:
+            return Response(
+                {"description": "Помилка сервера"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
     @action(
@@ -437,14 +462,9 @@ class AdminService(mixins.ListModelMixin, mixins.UpdateModelMixin, GenericViewSe
             }
         },
         responses={
-            200: OpenApiResponse(
-                response=UserToApprove, description="Successful update"
-            ),
-            400: OpenApiResponse(description="Bad Request - Invalid data provided"),
-            404: OpenApiResponse(description="Not Found - UserMini instance not found"),
-            500: OpenApiResponse(
-                description="Internal Server Error - Unexpected error occurred"
-            ),
+            200: UserMiniSerializer,
+            404: {"description": "Користувач не знайдений"},
+            500: {"description": "Помилка сервера"},
         },
         tags=["Admin", "User Management"],
         methods=["PUT"],
@@ -477,16 +497,13 @@ class AdminService(mixins.ListModelMixin, mixins.UpdateModelMixin, GenericViewSe
             serializer.is_valid(raise_exception=True)
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
-        except ValidationError:
-            return Response(
-                {"message": "Поганий запит"}, status=status.HTTP_400_BAD_REQUEST
-            )
         except UserMini.DoesNotExist:
             return Response(
-                {"message": "Користувач не знайдений"}, status=status.HTTP_404_NOT_FOUND
+                {"description": "Користувач не знайдений"},
+                status=status.HTTP_404_NOT_FOUND,
             )
-        except Exception as e:
+        except Exception:
             return Response(
-                {"message": f"Помилка {e}"},
+                {"description": "Помилка сервера"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )

@@ -34,3 +34,8 @@ class EmploymentSerializer(ModelSerializer):
             "quantity_of_animals",
         ]
         verbose_name = "Про нас - статистика"
+        extra_kwargs = {
+            "quantity_of_employees": {"required": False},
+            "quantity_of_succeeds_adoptions": {"required": False},
+            "quantity_of_animals": {"required": False},
+        }

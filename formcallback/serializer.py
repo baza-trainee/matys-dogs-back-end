@@ -43,6 +43,7 @@ class Notice(ModelSerializer):
             "phone_number",
             "comment",
             "id_dog",
+            "date",
             "is_read",
             "status",
             "processing",

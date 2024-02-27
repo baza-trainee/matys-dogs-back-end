@@ -5,6 +5,7 @@ from django.core.exceptions import ValidationError
 from drf_spectacular.utils import extend_schema
 from .models import CallbackForm
 from .serializer import UserCallBack, Notice, NoticeUpdateSerializer
+from rest_framework.response import Response
 
 # Create your views here.
 
@@ -35,20 +36,27 @@ class CallBackPost(mixins.CreateModelMixin, viewsets.GenericViewSet):
                 "required": ["name", "phone_number", "id_dog"],
             }
         },
-        responses={200: Notice, 400: "Bad request", 500: "Internal server error"},
     )
     def create(self, request, *args, **kwargs):
         """
         Handles the creation of a new callback request. Validates the request data and saves
         the new callback form if valid. Returns the created callback form data on success.
         """
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        headers = self.get_success_headers(serializer.data)
-        return response.Response(
-            serializer.data, status=status.HTTP_200_OK, headers=headers
-        )
+        try:
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            self.perform_create(serializer)
+            headers = self.get_success_headers(serializer.data)
+            return Response(serializer.data, status=status.HTTP_200_OK, headers=headers)
+        except ValidationError as e:
+            return Response(
+                {"message": f"Поганий запит - {e}"}, status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception:
+            return Response(
+                {"message": "Помилка сервера"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
 
 class NotificationAdmin(
@@ -96,8 +104,8 @@ class NotificationAdmin(
         },
         responses={
             200: Notice,
-            404: "Not found",
-            500: "Internal server error",
+            404: {"description": "Помилка - не знайдено"},
+            500: {"description": "Помилка сервера"},
         },
     )
     def update(self, request, pk, *args, **kwargs):
@@ -110,13 +118,14 @@ class NotificationAdmin(
             serializer = NoticeUpdateSerializer(instance, data=request.data)
             serializer.is_valid(raise_exception=True)
             serializer.save()
-            return response.Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.data, status=status.HTTP_200_OK)
         except CallbackForm.DoesNotExist:
-            return response.Response(
-                {"message": "Помилка - не знайдено"}, status=status.HTTP_404_NOT_FOUND
+            return Response(
+                {"description": "Помилка - не знайдено"},
+                status=status.HTTP_404_NOT_FOUND,
             )
-        except Exception as e:
-            return response.Response(
-                {"message": f"Помилка {e}"},
+        except Exception:
+            return Response(
+                {"description": "Помилка сервера"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )

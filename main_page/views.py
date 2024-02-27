@@ -52,6 +52,7 @@ class MainPageView(ListModelMixin, GenericViewSet):
     """
 
     permission_classes = [AllowAny]
+    serializer_class = NewsSerializer
     serializer_mapping = {
         News: NewsSerializer,
         Partners: PartnerSerializer,
@@ -88,7 +89,6 @@ class MainPageView(ListModelMixin, GenericViewSet):
         dog_cards_queryset = DogCardModel.objects.all().prefetch_related("photo")
         partners_queryset = Partners.objects.all().prefetch_related("logo")
 
-        # Serialize news and dog cards
         news_serializer = self.serializer_mapping[News](news_queryset, many=True)
         dog_cards_serializer = self.serializer_mapping[DogCardModel](
             dog_cards_queryset, many=True
@@ -226,7 +226,8 @@ class NewsView(
         },
         responses={
             201: NewsTranslationsSerializer,
-            400: {"description": "Invalid data provided."},
+            400: {"description": "Помилка при створені ValidationError"},
+            500: {"description": "Помилка сервера"},
         },
     )
     def create(self, request, *args, **kwargs):
@@ -256,11 +257,19 @@ class NewsView(
             serilaizer.save()
 
             return Response(
-                {"massage": "news was created", "news": serilaizer.data},
+                serilaizer.data,
                 status=status.HTTP_201_CREATED,
             )
         except ValidationError as e:
-            return Response({"message": e.detail}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"description": f"Помилка при створені {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except Exception as e:
+            return Response(
+                {"description": "Помилка сервера"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
     @extend_schema(
         summary="Update a News Item",
@@ -281,8 +290,9 @@ class NewsView(
         },
         responses={
             200: NewsTranslationsSerializer,
-            404: {"description": "News item not found."},
-            500: {"description": "Internal server error."},
+            400: {"description": "Помилка при оновлені ValidationError"},
+            404: {"description": "Новини не знайдена"},
+            500: {"description": "Помилка сервера"},
         },
     )
     def update(self, request, pk, *args, **kwargs):
@@ -310,8 +320,12 @@ class NewsView(
             serilaizer.is_valid(raise_exception=True)
             self.update_news(news, serilaizer.validated_data)
             self.perform_update(serializer=serilaizer)
+            return Response(serilaizer.data, status=status.HTTP_200_OK)
+
+        except ValidationError as e:
             return Response(
-                {"message": "Новини були оновлені"}, status=status.HTTP_200_OK
+                {"description": f"Помилка при оновлені {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
         except News.DoesNotExist:
             return Response(
@@ -319,7 +333,7 @@ class NewsView(
             )
         except Exception as e:
             return Response(
-                {"message": f"Помилка {e}"},
+                {"description": "Помилка сервера"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -327,9 +341,9 @@ class NewsView(
         summary="Delete a News Item",
         description="Deletes a news item by ID, including any associated photos and their storage.",
         responses={
-            200: {"description": "The news item was successfully deleted."},
-            404: {"description": "News item not found."},
-            500: {"description": "Internal server error."},
+            200: {"description": "Новина видалена"},
+            404: {"description": "Новини не знайдено"},
+            500: {"description": "Помилка сервера"},
         },
     )
     def destroy(self, request, pk, *args, **kwargs):
@@ -355,19 +369,16 @@ class NewsView(
             news_item.photo.delete()
             news_item.delete()
 
-            return Response(
-                {"message": "Новини були видалені"}, status=status.HTTP_200_OK
-            )
+            return Response({"message": "Новина видалена"}, status=status.HTTP_200_OK)
 
         except News.DoesNotExist:
             return Response(
                 {"message": "Новини не знайдено"}, status=status.HTTP_404_NOT_FOUND
             )
 
-        except Exception as e:
-            logger.error(f"Помилка видалення новин: {e}", exc_info=True)
+        except Exception:
             return Response(
-                {"message": "Внутрішня помилка сервера"},
+                {"description": "Помилка сервера"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -405,9 +416,7 @@ class PartnersView(ListModelMixin, CreateModelMixin, DestroyModelMixin, GenericV
 
     @extend_schema(
         summary="List all partners",
-        responses={
-            200: PartnerSerializer(many=True),
-        },
+        responses={200: PartnerSerializer(many=True)},
     )
     def list(self, request, *args, **kwargs):
         """
@@ -437,7 +446,8 @@ class PartnersView(ListModelMixin, CreateModelMixin, DestroyModelMixin, GenericV
         },
         responses={
             201: PartnerSerializer,
-            400: {"description": "Поганий запит - недійсні дані"},
+            400: {"description": "Помилка при додаванні ValidationError"},
+            500: {"description": "Помилка сервера"},
         },
     )
     def create(self, request, *args, **kwargs):
@@ -469,7 +479,13 @@ class PartnersView(ListModelMixin, CreateModelMixin, DestroyModelMixin, GenericV
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         except ValidationError as e:
             return Response(
-                {"message": f"Помилка {e}"}, status=status.HTTP_400_BAD_REQUEST
+                {"description": f"Помилка при додаванні {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except Exception as e:
+            return Response(
+                {"description": "Помилка сервера"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
     @extend_schema(
@@ -477,7 +493,7 @@ class PartnersView(ListModelMixin, CreateModelMixin, DestroyModelMixin, GenericV
         responses={
             200: {"description": "Партнер був видалений"},
             404: {"description": "Партнер не знайдено"},
-            500: {"description": "Внутрішня помилка сервера"},
+            500: {"description": "Помилка сервера"},
         },
     )
     def destroy(self, request, pk, *args, **kwargs):
