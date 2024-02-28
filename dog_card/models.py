@@ -37,6 +37,7 @@ class DogCardModel(models.Model):
         on_delete=models.CASCADE,
         limit_choices_to=models.Q(category="image"),
         blank=True,
+        null=True,
     )
 
     def photo_url(self):

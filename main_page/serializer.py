@@ -55,8 +55,8 @@ class NewsTranslationsSerializer(ModelSerializer):
         if photo_data is not None:
             photo_obj = self.context["view"].handle_photo(photo_data, instance)
             validated_data["photo"] = photo_obj
-            news = super().update(instance, validated_data)
-            return news
+        news = super().update(instance, validated_data)
+        return news
 
 
 class PartnerSerializer(ModelSerializer):

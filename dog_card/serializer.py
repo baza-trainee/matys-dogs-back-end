@@ -58,8 +58,6 @@ class DogCardTranslationSerializer(ModelSerializer):
             photo_obj = self.context["view"].handle_photo(photo_data, None)
             validated_data["photo"] = photo_obj
             dog_card = DogCardModel.objects.create(**validated_data)
-            dog_card.photo = photo_obj
-            dog_card.save()
         return dog_card
 
     def update(self, instance, validated_data):
@@ -67,7 +65,7 @@ class DogCardTranslationSerializer(ModelSerializer):
         if photo_data is not None:
             photo_obj = self.context["view"].handle_photo(photo_data, instance)
             validated_data["photo"] = photo_obj
-            dog_card = super().update(instance, validated_data)
+        dog_card = super().update(instance, validated_data)
         return dog_card
 
     def destroy(self, instance, *args, **kwargs):

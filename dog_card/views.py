@@ -386,6 +386,7 @@ class DogCardView(
                     "age",
                     "size",
                     "description",
+                    "photo",
                 ],
             }
         },
@@ -470,14 +471,6 @@ class DogCardView(
                     "description_en": {"type": "string"},
                     "photo": {"type": "string", "format": "binary"},
                 },
-                "required": [
-                    "name",
-                    "ready_for_adoption",
-                    "gender",
-                    "age",
-                    "size",
-                    "description",
-                ],
             }
         },
         responses={

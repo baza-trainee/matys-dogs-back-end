@@ -267,7 +267,7 @@ class NewsView(
             )
         except Exception as e:
             return Response(
-                {"description": "Помилка сервера"},
+                {"description": f"Помилка сервера {e}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -285,7 +285,6 @@ class NewsView(
                     "url": {"type": "string", "format": "uri"},
                     "photo": {"type": "string", "format": "binary"},
                 },
-                "required": ["title", "sub_text", "url", "photo"],
             }
         },
         responses={
@@ -333,7 +332,7 @@ class NewsView(
             )
         except Exception as e:
             return Response(
-                {"description": "Помилка сервера"},
+                {"description": f"Помилка сервера {e}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
