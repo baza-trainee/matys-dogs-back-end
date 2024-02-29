@@ -265,9 +265,9 @@ class NewsView(
                 {"description": f"Помилка при створені {str(e)}"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        except Exception as e:
+        except Exception:
             return Response(
-                {"description": f"Помилка сервера {e}"},
+                {"description": "Помилка сервера"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -481,7 +481,7 @@ class PartnersView(ListModelMixin, CreateModelMixin, DestroyModelMixin, GenericV
                 {"description": f"Помилка при додаванні {str(e)}"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        except Exception as e:
+        except Exception:
             return Response(
                 {"description": "Помилка сервера"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -515,14 +515,14 @@ class PartnersView(ListModelMixin, CreateModelMixin, DestroyModelMixin, GenericV
             partner.logo.delete()
             partner.delete()
             return Response(
-                {"message": "Партнер був видалений"}, status=status.HTTP_200_OK
+                {"description": "Партнер був видалений"}, status=status.HTTP_200_OK
             )
         except Partners.DoesNotExist:
             return Response(
-                {"message": "Партнер не знайдено"}, status=status.HTTP_404_NOT_FOUND
+                {"description": "Партнер не знайдено"}, status=status.HTTP_404_NOT_FOUND
             )
-        except Exception as e:
+        except Exception:
             return Response(
-                {"message": f"Помилка {e}"},
+                {"description": "Помилка cервера"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )

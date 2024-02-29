@@ -112,7 +112,7 @@ class AboutImages(mixins.ListModelMixin, mixins.CreateModelMixin, GenericViewSet
 
             if images is None:
                 return Response(
-                    {"message": "Зображення не знайдено "},
+                    {"description": "Зображення не знайдено "},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
@@ -132,12 +132,12 @@ class AboutImages(mixins.ListModelMixin, mixins.CreateModelMixin, GenericViewSet
             )
         except ValidationError as e:
             return Response(
-                f"Поганий запит - {str(e)}",
+                {"description": f"Поганий запит - {str(e)}"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         except Exception:
             return Response(
-                {"message": "Помилка сервера"},
+                {"description": "Помилка сервера"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -224,7 +224,7 @@ class AboutEmployment(mixins.ListModelMixin, mixins.CreateModelMixin, GenericVie
         responses={
             200: EmploymentSerializer,
             400: {"description": "Поганий запит - ValidationError"},
-            500: {"description": "Внутрішня помилка сервера"},
+            500: {"description": "Помилка сервера"},
         },
     )
     def update(self, request):
@@ -247,11 +247,11 @@ class AboutEmployment(mixins.ListModelMixin, mixins.CreateModelMixin, GenericVie
             return Response(serializer.data, status=status.HTTP_200_OK)
         except ValidationError as e:
             return Response(
-                f"Поганий запит - {str(e)}",
+                {"description": f"Поганий запит - {str(e)}"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         except Exception:
             return Response(
-                {"message": "Помилка сервера"},
+                {"description": "Помилка сервера"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )

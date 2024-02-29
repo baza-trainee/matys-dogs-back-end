@@ -29,3 +29,4 @@ class AboutModel(models.Model):
     class Meta:
         verbose_name = "Про нас"
         verbose_name_plural = "Про нас"
+        

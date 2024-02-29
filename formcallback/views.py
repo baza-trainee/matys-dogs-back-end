@@ -36,6 +36,11 @@ class CallBackPost(mixins.CreateModelMixin, viewsets.GenericViewSet):
                 "required": ["name", "phone_number", "id_dog"],
             }
         },
+        responses={
+            200: UserCallBack,
+            400: {"description": "Поганий запит - ValidationError"},
+            500: {"description": "Помилка сервера"},
+        },
     )
     def create(self, request, *args, **kwargs):
         """
@@ -50,11 +55,12 @@ class CallBackPost(mixins.CreateModelMixin, viewsets.GenericViewSet):
             return Response(serializer.data, status=status.HTTP_200_OK, headers=headers)
         except ValidationError as e:
             return Response(
-                {"message": f"Поганий запит - {e}"}, status=status.HTTP_400_BAD_REQUEST
+                {"description": f"Поганий запит - {e}"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
         except Exception:
             return Response(
-                {"message": "Помилка сервера"},
+                {"description": "Помилка сервера"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 

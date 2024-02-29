@@ -419,7 +419,7 @@ class DogCardView(
             )
         except Exception as e:
             return Response(
-                {"description": "Помилка сервера"},
+                {"description": f"Помилка сервера {e}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 

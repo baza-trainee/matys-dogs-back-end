@@ -33,7 +33,7 @@ def initialize_b2api():
         bucket = b2_api.get_bucket_by_name(bucket_name=bucket_name)
         return bucket, bucket_name
     except Exception as e:
-        raise ValidationError(f"Error initializing B2 API: {e}")
+        raise ValidationError({"description":f"Помилка ініціалізація B2 API: {e}"})
 
 
 bucket, bucket_name = initialize_b2api()
@@ -57,13 +57,13 @@ def read_file(file_obj):
 def upload_to_backblaze(byte_arr, file_obj):
     if byte_arr.tell() > 2097152:
         raise ValidationError(
-            detail={'error': 'Розмір зображення не повинен перевищувати 2MB'})
+            detail={'description': 'Розмір зображення не повинен перевищувати 2MB'})
     webp_file_name = os.path.splitext(file_obj.name)[0] + '.webp'
     file_info = bucket.upload_bytes(
         byte_arr.getvalue(), file_name=webp_file_name)
     webp_image_name = file_info.file_name
     webp_image_id = file_info.id_
-    image_url = f'https://{bucket_name}.s3.us-east-005.backblazeb2.com/{webp_image_name}'
+    image_url = f'https://{bucket_name}.{os.environ.get('END_BACKET_PATH')}/{webp_image_name}'
 
     return webp_image_name, webp_image_id, image_url
 
@@ -77,7 +77,7 @@ def converter_to_webP(file_obj):
         byte_arr = compress_image(image)
         return upload_to_backblaze(byte_arr, file_obj)
     except Exception as e:
-        raise ValidationError(detail={f"Error converting to webp: {e}"})
+        raise ValidationError(detail={"description": f"Помилка перетвореня у webp: {e}"})
 
 
 def resize_image(image, refactor_size, min_dimension=MIN_DIMENSION):
@@ -94,11 +94,12 @@ def compress_image(image, quality=DEFAULT_QUALITY, lossy_quality=DEFAULT_LOSSY_Q
                    step_quality=QUALITY_STEP, step_lossy_quality=LOSSY_QUALITY_STEP,
                    target_size=TARGET_SIZE, refactor_size=0.8):
     if not isinstance(image, Image.Image):
-        raise ValidationError(detail={'error': 'Недійсний об’єкт зображення'})
+        raise ValidationError(detail={'description': 'Недійсний об’єкт зображення'})
     byte_arr = BytesIO()
     while byte_arr.tell() < target_size and quality >= 10:
-        byte_arr.seek(0)
-        byte_arr.truncate(0)
+        
+        byte_arr.seek(0) # Reset the pointer to the beginning of the file
+        byte_arr.truncate(0) # Clear the file
         image.save(byte_arr, format='webp', optimize=True,
                    quality=quality, progressive=True, lossy=True, lossy_quality=lossy_quality)
 
@@ -118,7 +119,7 @@ def compress_image(image, quality=DEFAULT_QUALITY, lossy_quality=DEFAULT_LOSSY_Q
 
 def delete_file_from_backblaze(id):
     if not id:
-        raise ValidationError(detail={'error': 'File id is required'})
+        raise ValidationError(detail={'description': 'Потрібен ідентифікатор файлу'})
     try:
         # Get file info by id
         file_info = bucket.get_file_info_by_id(file_id=id)
@@ -128,4 +129,4 @@ def delete_file_from_backblaze(id):
         # Return deleted file info
         return delted_file
     except Exception as e:
-        raise ValidationError(detail={f"Error deleting file: {e}"})
+        raise ValidationError(detail={"description":f"Помилка при видалені: {e}"})
