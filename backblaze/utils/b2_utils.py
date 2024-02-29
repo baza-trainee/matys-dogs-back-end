@@ -62,8 +62,9 @@ def upload_to_backblaze(byte_arr, file_obj):
     file_info = bucket.upload_bytes(
         byte_arr.getvalue(), file_name=webp_file_name)
     webp_image_name = file_info.file_name
+    end_path = os.environ.get('END_BACKET_PATH')
     webp_image_id = file_info.id_
-    image_url = f'https://{bucket_name}.{os.environ.get('END_BACKET_PATH')}/{webp_image_name}'
+    image_url = f'https://{bucket_name}.{end_path}/{webp_image_name}'
 
     return webp_image_name, webp_image_id, image_url
 
