@@ -6,6 +6,7 @@ from drf_spectacular.utils import extend_schema
 from .models import CallbackForm
 from .serializer import UserCallBack, Notice, NoticeUpdateSerializer
 from rest_framework.response import Response
+from django.shortcuts import get_object_or_404
 
 # Create your views here.
 
@@ -125,6 +126,37 @@ class NotificationAdmin(
             serializer.is_valid(raise_exception=True)
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
+        except CallbackForm.DoesNotExist:
+            return Response(
+                {"description": "Помилка - не знайдено"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        except Exception:
+            return Response(
+                {"description": "Помилка сервера"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    @extend_schema(
+        summary="Delete notification",
+        description="Delete notification",
+        responses={
+            200: {"description": "Повідомлення будво видалено"},
+            404: {"description": "Помилка - не знайдено"},
+            500: {"description": "Помилка сервера"},
+        },
+    )
+    def destroy(self, request, pk):
+        """
+        Deletes a notification identified by its primary key. Returns a success message on successful deletion.
+        """
+        try:
+            instance = CallbackForm.objects.get(pk=pk)
+            instance.delete()
+            return Response(
+                {"description": "Повідомлення будво видалено"},
+                status=status.HTTP_200_OK,
+            )
         except CallbackForm.DoesNotExist:
             return Response(
                 {"description": "Помилка - не знайдено"},
