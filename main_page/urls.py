@@ -19,5 +19,5 @@ urlpatterns = [
             'get': 'list',
             'post': 'create',
         }), name='partners'),
-    path('partners/<str:pk>', PartnersView.as_view({'delete': 'destroy'}))
+    path('partners/<int:pk>', PartnersView.as_view({'delete': 'destroy'}))
 ]
