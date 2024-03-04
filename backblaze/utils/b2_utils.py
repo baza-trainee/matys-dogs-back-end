@@ -122,12 +122,9 @@ def delete_file_from_backblaze(id):
     if not id:
         raise ValidationError(detail={'description': 'Потрібен ідентифікатор файлу'})
     try:
-        # Get file info by id
         file_info = bucket.get_file_info_by_id(file_id=id)
-        # Delete file
         delted_file = bucket.delete_file_version(
             file_id=file_info.id_, file_name=file_info.file_name)
-        # Return deleted file info
         return delted_file
     except Exception as e:
         raise ValidationError(detail={"description":f"Помилка при видалені: {e}"})

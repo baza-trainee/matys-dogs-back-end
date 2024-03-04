@@ -549,8 +549,8 @@ class DogCardView(
             return Response(
                 {"description": "Карти не знайдено"}, status=status.HTTP_404_NOT_FOUND
             )
-        except Exception:
+        except Exception as e:
             return Response(
-                {"description": "Помилка сервера"},
+                {"description": f"Помилка сервера {e}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
