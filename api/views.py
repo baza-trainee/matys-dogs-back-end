@@ -13,7 +13,7 @@ from django.conf import settings
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework.decorators import action
 from django.contrib.auth.hashers import make_password
-from drf_spectacular.utils import OpenApiResponse, OpenApiParameter, extend_schema
+from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework.viewsets import GenericViewSet
 from .serializer import UserMiniSerializer, UserToApprove
 import json
@@ -90,6 +90,7 @@ class AuthenticationService(
                 ],
             }
         },
+        tags=["Authentication"],
         responses={
             201: OpenApiResponse(
                 description="User registration successful",
@@ -109,7 +110,7 @@ class AuthenticationService(
         },
     )
     @action(detail=False, methods=["POST"], url_path="register")
-    def register(self, request, *args, **kwargs):
+    def register(self, request):
         try:
             data = json.loads(request.body)
 
@@ -162,6 +163,7 @@ class AuthenticationService(
                 "required": ["email", "password"],
             }
         },
+        tags=["Authentication"],
         responses={
             200: OpenApiResponse(
                 description="User login successful",
@@ -184,7 +186,7 @@ class AuthenticationService(
         },
     )
     @action(detail=False, methods=["POST"], url_path="login")
-    def login(self, request, *args, **kwargs):
+    def login(self, request):
         try:
             data = json.loads(request.body)
             email = data["email"]
@@ -224,20 +226,6 @@ class AuthenticationService(
 
     @extend_schema(
         summary="Reset password",
-        parameters=[
-            OpenApiParameter(
-                name="uidb64",
-                description="Base64 encoded user ID",
-                required=True,
-                type=str,
-            ),
-            OpenApiParameter(
-                name="token",
-                description="Password reset token",
-                required=True,
-                type=str,
-            ),
-        ],
         request={
             "application/json": {
                 "type": "object",
@@ -251,6 +239,7 @@ class AuthenticationService(
                 "required": ["password", "confirmPassword"],
             }
         },
+        tags=["Authentication"],
         responses={
             200: OpenApiResponse(
                 description="Password reset successful",
@@ -274,7 +263,7 @@ class AuthenticationService(
         methods=["POST"],
         url_path="reset-password/<str:uidb64>/<str:token>",
     )
-    def reset_password(self, request, uidb64, token, *args, **kwargs):
+    def reset_password(self, request, uidb64, token):
         try:
             new_password_data = json.loads(request.body)
             password = new_password_data["password"]
@@ -321,6 +310,7 @@ class AuthenticationService(
                 "required": ["email"],
             }
         },
+        tags=["Authentication"],
         responses={
             200: OpenApiResponse(
                 description="Password reset email sent successfully",
@@ -350,7 +340,7 @@ class AuthenticationService(
         },
     )
     @action(detail=False, methods=["POST"], url_path="forgot-password")
-    def forgot_password(self, request, *args, **kwargs):
+    def forgot_password(self, request):
         data = json.loads(request.body)
         email = data["email"]
         self.email_validation(email=email)
@@ -379,6 +369,9 @@ class AuthenticationService(
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
+    @extend_schema(
+        tags=["Authentication"],
+    )
     @action(
         detail=False,
         permission_classes=[IsAuthenticated],
@@ -429,7 +422,6 @@ class AdminService(mixins.ListModelMixin, mixins.UpdateModelMixin, GenericViewSe
         summary="List all UserMini instances",
         description="Retrieves a list of all UserMini instances from the database. This endpoint is accessible only to users with admin privileges.",
         responses={200: UserMiniSerializer(many=True)},
-        tags=["Admin", "User Management"],
     )
     def list(self, request, *args, **kwargs):
         """
@@ -466,7 +458,6 @@ class AdminService(mixins.ListModelMixin, mixins.UpdateModelMixin, GenericViewSe
             404: {"description": "Користувач не знайдений"},
             500: {"description": "Помилка сервера"},
         },
-        tags=["Admin", "User Management"],
         methods=["PUT"],
     )
     def update(self, request, pk):

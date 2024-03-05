@@ -69,7 +69,8 @@ class MainPageView(ListModelMixin, GenericViewSet):
                 description="Language code to get the content in a specific language (e.g., en, uk)",
                 enum=["en", "uk"],
             ),
-        ]
+        ],
+        tags=["Main Page"],
     )
     def list(self, request, *args, **kwargs):
         """
