@@ -141,7 +141,7 @@ class AuthenticationService(
                 {"description": f"Помилка при реєстрації {e}"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        except Exception as e:
+        except Exception:
             return Response(
                 {"description": f"Помилка сервера"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,

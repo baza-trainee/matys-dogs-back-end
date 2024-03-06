@@ -396,7 +396,7 @@ class DogCardView(
             500: {"description": "Помилка сервера"},
         },
     )
-    def create(self, request, *args, **kwargs):
+    def create(self, request):
         """
         Creates a new DogCardModel instance.
 
@@ -417,9 +417,9 @@ class DogCardView(
                 {"description": f"Помилка при створені {str(e)}"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        except Exception as e:
+        except Exception:
             return Response(
-                {"description": f"Помилка сервера {e}"},
+                {"description": "Помилка сервера"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -480,7 +480,7 @@ class DogCardView(
             500: {"description": "Помилка сервера"},
         },
     )
-    def update(self, request, pk, *args, **kwargs):
+    def update(self, request, pk):
         """
         Updates an existing DogCardModel instance.
 
@@ -511,7 +511,7 @@ class DogCardView(
             return Response(
                 {"description": "Карта не знайдена"}, status=status.HTTP_404_NOT_FOUND
             )
-        except Exception as e:
+        except Exception:
             return Response(
                 {"description": "Помилка сервера"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -526,7 +526,7 @@ class DogCardView(
             500: {"description": "Помилка сервера"},
         },
     )
-    def destroy(self, request, pk, *args, **kwargs):
+    def destroy(self, request, pk):
         """
         Deletes a DogCardModel instance along with its associated photo.
 
