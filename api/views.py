@@ -349,7 +349,7 @@ class AuthenticationService(
             user = User.objects.get(email=email)
             token = default_token_generator.make_token(user)
             uid = urlsafe_base64_encode(force_bytes(user.pk))
-            password_reset_link = f"{domain}/reset-passoword/{uid}/{token}"
+            password_reset_link = f"{domain}/reset-password/{uid}/{token}"
             send_mail(
                 "Скинути пароль",
                 f"Клацніть, щоб посилання на скидання пароля : {password_reset_link}",
